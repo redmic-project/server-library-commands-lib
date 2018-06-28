@@ -1,0 +1,33 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"title": "Test DTO",
+	"type": ["object", "null"],
+	"properties": {
+		"id": {
+			"type": ["string", "null"]
+		},
+		"mmsi": {
+			"type": ["integer", "null"]
+		},
+		"imo": {
+			"type": ["integer", "null"]
+		},
+		"type": {
+			"type": ["integer", "null"],
+			"url": "/api/vessels/commands/testtype"
+		},
+		"name": {
+			"type": ["string", "null"]
+		},
+		"callSign": {
+			"type": ["string", "null"]
+		},
+		"length": {
+			"type": ["number", "null"]
+		},
+		"beam": {
+			"type": ["number", "null"]
+		}
+	},
+	"definitions": {}
+}
