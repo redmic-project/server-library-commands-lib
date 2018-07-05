@@ -20,6 +20,8 @@ public abstract class BaseStreams {
 
 	protected String serviceId;
 
+	protected Long windowsTime;
+
 	protected final String SCHEMA_REGISTRY_URL_PROPERTY = "schema.registry.url";
 
 	protected KafkaStreams streams;
@@ -30,6 +32,7 @@ public abstract class BaseStreams {
 		this.serviceId = config.getServiceId();
 		this.bootstrapServers = config.getBootstrapServers();
 		this.schemaRegistry = config.getSchemaRegistry();
+		this.windowsTime = config.getWindowsTime();
 	}
 
 	protected void init() {
