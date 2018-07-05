@@ -14,15 +14,20 @@ public class StreamConfig {
 
 	private String serviceId;
 
+	private Long windowsTime;
+
 	public StreamConfig(Builder builder) {
 		this.topic = builder.topic;
 		this.stateStoreDir = builder.stateStoreDir;
 		this.serviceId = builder.serviceId;
 		this.bootstrapServers = builder.bootstrapServers;
 		this.schemaRegistry = builder.schemaRegistry;
+		this.windowsTime = builder.windowsTime;
 	}
 
 	public static class Builder {
+
+		private static final long DEFAULT_WINDOWS_TIME_MS = 60000;
 
 		private String bootstrapServers;
 
@@ -33,6 +38,8 @@ public class StreamConfig {
 		private String stateStoreDir;
 
 		private String serviceId;
+
+		private Long windowsTime;
 
 		public static Builder bootstrapServers(String bootstrapServers) {
 			Builder builder = new Builder();
@@ -60,6 +67,11 @@ public class StreamConfig {
 			return this;
 		}
 
+		public Builder windowsTime(long windowsTime) {
+			this.windowsTime = windowsTime;
+			return this;
+		}
+
 		public StreamConfig build() {
 
 			assertNotNull(bootstrapServers);
@@ -67,6 +79,10 @@ public class StreamConfig {
 			assertNotNull(serviceId);
 			assertNotNull(stateStoreDir);
 			assertNotNull(topic);
+
+			if (windowsTime == null) {
+				windowsTime = DEFAULT_WINDOWS_TIME_MS;
+			}
 			return new StreamConfig(this);
 		}
 	}
@@ -89,5 +105,9 @@ public class StreamConfig {
 
 	public String getServiceId() {
 		return serviceId;
+	}
+
+	public long getWindowsTime() {
+		return windowsTime;
 	}
 }
