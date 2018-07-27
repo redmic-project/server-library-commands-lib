@@ -1,7 +1,5 @@
 package es.redmic.commandslib.statestore;
 
-import static org.junit.Assert.assertNotNull;
-
 public class StreamConfig {
 
 	private String schemaRegistry;
@@ -74,11 +72,11 @@ public class StreamConfig {
 
 		public StreamConfig build() {
 
-			assertNotNull(bootstrapServers);
-			assertNotNull(schemaRegistry);
-			assertNotNull(serviceId);
-			assertNotNull(stateStoreDir);
-			assertNotNull(topic);
+			assert bootstrapServers != null;
+			assert schemaRegistry != null;
+			assert serviceId != null;
+			assert stateStoreDir != null;
+			assert topic != null;
 
 			if (windowsTime == null) {
 				windowsTime = DEFAULT_WINDOWS_TIME_MS;
