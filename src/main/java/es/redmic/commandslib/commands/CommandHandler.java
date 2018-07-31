@@ -22,8 +22,8 @@ import es.redmic.exception.common.BaseException;
 
 public abstract class CommandHandler implements ApplicationEventPublisherAware {
 
-	@Value("${eventsource.timeout.ms}")
-	private long timeoutms;
+	@Value("${rest.eventsource.timeout.ms}")
+	private long timeoutMS;
 
 	protected static Logger logger = LogManager.getLogger();
 
@@ -90,13 +90,18 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 	}
 
 	// Resuelve el CompletableFuture controlando posibles fallos y borrando la
-	// entrada
-	protected <T> T getResult(String sessionId, CompletableFuture<T> completableFeature) {
+	// entrada. El timeout es configurable dependiendo de la función llamada
+	protected <T> T getResult(String sessionId, CompletableFuture<T> completableFuture) {
+		return getResult(timeoutMS, sessionId, completableFuture);
+	}
+
+	protected <T> T getResult(long timeoutMS, String sessionId, CompletableFuture<T> completableFuture) {
 
 		try {
-			return completableFeature.get(timeoutms, TimeUnit.MILLISECONDS);
+			return completableFuture.get(timeoutMS, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException | TimeoutException e) {
-			logger.error(e.getMessage());
+			// TODO: Enviar alerta ya que ha quedado un evento sin acabar el ciclo
+			logger.error("Error. No se ha recibido confirmación de la acción realizada.");
 			throw new ConfirmationTimeoutException();
 		} catch (ExecutionException e) {
 			if (e.getCause() instanceof BaseException)
