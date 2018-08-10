@@ -69,6 +69,5 @@ public abstract class BaseStreams {
 		// TODO: Mandar alerta
 		logger.error("Error no conocido en kafka stream");
 		throwable.printStackTrace();
-		streams.close();
 	}
 }
