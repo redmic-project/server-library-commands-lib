@@ -8,6 +8,7 @@ import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
+import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.streams.BaseStreams;
 
@@ -15,8 +16,8 @@ public abstract class StateStore extends BaseStreams {
 
 	protected ReadOnlyKeyValueStore<String, Event> store;
 
-	public StateStore(StreamConfig config) {
-		super(config);
+	public StateStore(StreamConfig config, AlertService alertService) {
+		super(config, alertService);
 	}
 
 	@Override

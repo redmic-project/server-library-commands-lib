@@ -4,6 +4,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KStream;
 
+import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.statestore.StreamConfig;
 import es.redmic.commandslib.statestore.StreamUtils;
@@ -12,8 +13,8 @@ public abstract class EventStreams extends BaseStreams {
 
 	protected StreamsBuilder builder = new StreamsBuilder();
 
-	public EventStreams(StreamConfig config) {
-		super(config);
+	public EventStreams(StreamConfig config, AlertService alertService) {
+		super(config, alertService);
 	}
 
 	@Override
@@ -48,7 +49,10 @@ public abstract class EventStreams extends BaseStreams {
 	protected boolean isSameSession(Event a, Event b) {
 
 		if (!(a.getSessionId().equals(b.getSessionId()))) {
-			logger.error("Se esperaba eventos con el mismo id de sesión");
+			String message = "Recibido evento de petición con id de sessión diferente al evento de confirmación para item "
+					+ a.getAggregateId();
+			logger.error(message);
+			alertService.errorAlert(a.getAggregateId(), message);
 			return false;
 		}
 		return true;
