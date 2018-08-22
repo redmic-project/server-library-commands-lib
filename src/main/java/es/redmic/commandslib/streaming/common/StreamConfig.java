@@ -1,4 +1,4 @@
-package es.redmic.commandslib.statestore;
+package es.redmic.commandslib.streaming.common;
 
 public class StreamConfig {
 

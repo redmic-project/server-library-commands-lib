@@ -1,11 +1,12 @@
-package es.redmic.commandslib.streams;
+package es.redmic.commandslib.streaming.common;
 
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.alert.AlertService;
-import es.redmic.commandslib.statestore.StreamConfig;
 
 public abstract class BaseStreams {
 
@@ -75,5 +76,24 @@ public abstract class BaseStreams {
 		logger.error(msg);
 		throwable.printStackTrace();
 		alertService.errorAlert(this.topic, msg);
+	}
+
+	/*
+	 * En ocaciones el store se bloquea debido a operaciones de rebalanceo de kafka.
+	 * Esta función permite esperar hasta que sea accesible.
+	 */
+
+	protected static <T> T waitUntilStoreIsQueryable(final String storeName,
+			final QueryableStoreType<T> queryableStoreType, final KafkaStreams streams) {
+		while (true) {
+			try {
+				return streams.store(storeName, queryableStoreType);
+			} catch (InvalidStateStoreException ignored) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
+			}
+		}
 	}
 }

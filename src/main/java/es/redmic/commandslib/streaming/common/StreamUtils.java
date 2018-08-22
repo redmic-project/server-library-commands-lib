@@ -1,4 +1,4 @@
-package es.redmic.commandslib.statestore;
+package es.redmic.commandslib.streaming.common;
 
 import java.util.Map;
 import java.util.Properties;

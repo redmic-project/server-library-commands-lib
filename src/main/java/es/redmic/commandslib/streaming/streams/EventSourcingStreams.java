@@ -1,4 +1,4 @@
-package es.redmic.commandslib.streams;
+package es.redmic.commandslib.streaming.streams;
 
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -6,14 +6,15 @@ import org.apache.kafka.streams.kstream.KStream;
 
 import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
-import es.redmic.commandslib.statestore.StreamConfig;
-import es.redmic.commandslib.statestore.StreamUtils;
+import es.redmic.commandslib.streaming.common.BaseStreams;
+import es.redmic.commandslib.streaming.common.StreamConfig;
+import es.redmic.commandslib.streaming.common.StreamUtils;
 
-public abstract class EventStreams extends BaseStreams {
+public abstract class EventSourcingStreams extends BaseStreams {
 
 	protected StreamsBuilder builder = new StreamsBuilder();
 
-	public EventStreams(StreamConfig config, AlertService alertService) {
+	public EventSourcingStreams(StreamConfig config, AlertService alertService) {
 		super(config, alertService);
 	}
 
