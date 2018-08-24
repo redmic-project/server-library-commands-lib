@@ -29,10 +29,13 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		KStream<String, Event> events = builder.stream(topic);
 
 		// Create Success
-		processCreatedStream(events);
+		processCreateSuccessStream(events);
 
 		// Update Success
-		processUpdatedStream(events);
+		processUpdateSuccessStream(events);
+
+		// Comprueba si el elemento está referenciado para cancelar el borrado
+		processDeleteStream(events);
 
 		// Failed change
 		processFailedChangeStream(events);
@@ -55,7 +58,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	 * envía evento creado
 	 */
 
-	protected void processCreatedStream(KStream<String, Event> events) {
+	protected void processCreateSuccessStream(KStream<String, Event> events) {
 
 		// Stream filtrado por eventos de confirmación al crear
 		KStream<String, Event> createConfirmedEvents = events
@@ -84,7 +87,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	 * de la vista, manda a procesar las ediciones parciales
 	 */
 
-	protected void processUpdatedStream(KStream<String, Event> events) {
+	protected void processUpdateSuccessStream(KStream<String, Event> events) {
 
 		// Stream filtrado por eventos de confirmación al modificar
 		KStream<String, Event> updateConfirmedEvents = events
@@ -108,6 +111,12 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	 */
 
 	protected abstract Event getUpdatedEvent(Event confirmedEvent, Event requestEvent);
+
+	/*
+	 * Procesa peticiones de borrado para comprobar si está referenciado
+	 */
+
+	protected abstract void processDeleteStream(KStream<String, Event> events);
 
 	/*
 	 * Función que a partir del último evento correcto + el evento de edición
