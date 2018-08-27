@@ -9,7 +9,8 @@ public enum ExceptionType implements ExceptionTypeItfc {
 	// EventSource
 	HISTORY_NOT_FOUND(Constants.HISTORY_NOT_FOUND),
 	CONFIRMATION_TIMEOUT(Constants.CONFIRMATION_TIMEOUT),
-	ITEM_LOCKED(Constants.ITEM_LOCKED);
+	ITEM_LOCKED(Constants.ITEM_LOCKED),
+	ITEM_REFERENCED(Constants.ITEM_REFERENCED);
 	
 	// @formatter:on
 
@@ -40,7 +41,8 @@ public enum ExceptionType implements ExceptionTypeItfc {
 		// @formatter:off
 		public static final String HISTORY_NOT_FOUND = "HistoryNotFound",
 				CONFIRMATION_TIMEOUT = "ConfirmationTimeout",
-				ITEM_LOCKED = "ItemLocked";
+				ITEM_LOCKED = "ItemLocked",
+				ITEM_REFERENCED = "ItemReferenced";
 		// @formatter:on
 	}
 
