@@ -28,8 +28,14 @@ public abstract class EventSourcingStreams extends BaseStreams {
 
 		KStream<String, Event> events = builder.stream(topic);
 
+		// Realiza el enriquecimiento del item antes de crear
+		processEnrichCreateSteam(events);
+
 		// Create Success
 		processCreateSuccessStream(events);
+
+		// Realiza el enriquecimiento del item antes de modificar
+		processEnrichUpdateSteam(events);
 
 		// Update Success
 		processUpdateSuccessStream(events);
@@ -54,6 +60,14 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	protected abstract void createExtraStreams();
 
 	/*
+	 * Función que a partir de los eventos de tipo CreateEnrich y globalKTable de
+	 * las relaciones, enriquece el item antes de mandarlo a crear
+	 * 
+	 */
+
+	protected abstract void processEnrichCreateSteam(KStream<String, Event> events);
+
+	/*
 	 * Función que a partir de los eventos de crear y confirmación de la vista,
 	 * envía evento creado
 	 */
@@ -73,6 +87,14 @@ public abstract class EventSourcingStreams extends BaseStreams {
 				(confirmedEvent, requestEvent) -> getCreatedEvent(confirmedEvent, requestEvent),
 				JoinWindows.of(windowsTime)).to(topic);
 	}
+
+	/*
+	 * Función que a partir de los eventos de tipo UpdateEnrich y globalKTable de
+	 * las relaciones, enriquece el item antes de mandarlo a modificar
+	 * 
+	 */
+
+	protected abstract void processEnrichUpdateSteam(KStream<String, Event> events);
 
 	/*
 	 * Función que a partir del evento de confirmación de la vista y del evento
