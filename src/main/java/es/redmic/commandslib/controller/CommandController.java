@@ -26,7 +26,7 @@ import es.redmic.exception.databinding.DTONotValidException;
 import es.redmic.models.es.common.dto.BodyItemDTO;
 import es.redmic.models.es.common.dto.SuperDTO;
 
-public abstract class CommandController<TDTO extends CommonDTO> {
+public abstract class CommandController<TDTO extends CommonDTO> extends CommandBaseController<TDTO> {
 
 	protected static Logger logger = LogManager.getLogger();
 
@@ -77,6 +77,7 @@ public abstract class CommandController<TDTO extends CommonDTO> {
 		return new SuperDTO(true);
 	}
 
+	@Override
 	@GetMapping(value = "${controller.mapping.EDIT_SCHEMA}")
 	@ResponseBody
 	public HashMap<String, Object> getJsonSchema() {
