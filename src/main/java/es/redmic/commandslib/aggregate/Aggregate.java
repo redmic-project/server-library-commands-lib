@@ -64,10 +64,18 @@ public abstract class Aggregate {
 			logger.error("Intentando modificar un elemento eliminado, ", id);
 			throw new ItemNotFoundException("id", id);
 		}
+	}
 
-		if (isLocked(eventType)) {
-			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ", id);
-			throw new ItemLockedException("id", id);
+	protected void check(Event event) {
+
+		if (isLocked(event.getType()) && !event.getType().equals(EventTypes.DELETED)) {
+
+			// TODO: Si el tiempo entre el último y el actual es superior a el máximo del
+			// ciclo, compensar.
+
+			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ",
+					event.getAggregateId());
+			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}
 
@@ -119,40 +127,6 @@ public abstract class Aggregate {
 	 * evento, seteando un estado válido.
 	 */
 	public abstract void loadFromHistory(Event event);
-
-	protected void _loadFromHistory(Event history) {
-
-		String eventType = history.getType();
-
-		switch (eventType) {
-		case "CREATE_CONFIRMED":
-			logger.debug("Creación confirmada");
-			apply(history);
-			break;
-		case "UPDATE_CONFIRMED":
-			logger.debug("Modificación confirmada");
-			apply(history);
-			break;
-		case "DELETE":
-			logger.debug("En fase de borrado");
-			apply(history);
-			break;
-		case "DELETE_CONFIRMED":
-			logger.debug("Borrado confirmado");
-			apply(history);
-			break;
-		// FAILED
-		case "CREATE_FAILED":
-		case "UPDATE_FAILED":
-		case "DELETE_FAILED":
-			logger.debug("Evento fallido");
-			apply(history);
-			break;
-		default:
-			logger.debug("Evento no manejado ", history.getType());
-			break;
-		}
-	}
 
 	protected void reset() {
 
