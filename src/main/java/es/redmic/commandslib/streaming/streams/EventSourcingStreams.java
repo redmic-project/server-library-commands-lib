@@ -17,8 +17,13 @@ public abstract class EventSourcingStreams extends BaseStreams {
 
 	protected StreamsBuilder builder = new StreamsBuilder();
 
+	protected String snapshotTopicSuffix = "-snapshot";
+
+	protected String snapshotTopic;
+
 	public EventSourcingStreams(StreamConfig config, AlertService alertService) {
 		super(config, alertService);
+		snapshotTopic = topic + snapshotTopicSuffix;
 	}
 
 	@Override
@@ -27,6 +32,9 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		createExtraStreams();
 
 		KStream<String, Event> events = builder.stream(topic);
+
+		// Reenvia eventos snapshot al topic correspondiente
+		forwardSnapshotEvents(events);
 
 		// Realiza el enriquecimiento del item antes de crear
 		processEnrichCreateSteam(events);
@@ -52,6 +60,8 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		return new KafkaStreams(builder.build(),
 				StreamUtils.baseStreamsConfig(bootstrapServers, stateStoreDir, serviceId, schemaRegistry));
 	}
+
+	protected abstract void forwardSnapshotEvents(KStream<String, Event> events);
 
 	/*
 	 * Función para crear streams extra que sean necesarios y específicos de cada
