@@ -72,7 +72,8 @@ public abstract class BaseStreams {
 
 	private void uncaughtException(Thread thread, Throwable throwable) {
 
-		String msg = "Error no conocido en kafka stream. El stream dejará de funcionar";
+		String msg = "Error no conocido en kafka stream. El stream dejará de funcionar "
+				+ throwable.getLocalizedMessage();
 		logger.error(msg);
 		throwable.printStackTrace();
 		alertService.errorAlert(this.topic, msg);
