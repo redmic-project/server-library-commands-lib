@@ -44,7 +44,6 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 	/* Handler por defecto para descartar los mensajes que no queremos */
 	@KafkaHandler(isDefault = true)
 	public void defaultListen(Object event) {
-		logger.info("Mensaje descartado: " + event.getClass());
 	}
 
 	// Resuelve el CompletableFuture con el evento recibido
