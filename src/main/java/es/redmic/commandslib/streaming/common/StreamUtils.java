@@ -33,8 +33,6 @@ public class StreamUtils {
 		config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
 		config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50);
-		config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 600000);
-		config.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, 605000);
 		config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000);
 
 		// config.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG,
