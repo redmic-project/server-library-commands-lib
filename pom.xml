@@ -28,8 +28,8 @@
 		<redmic.rest-lib.version>0.6.0</redmic.rest-lib.version>
 
 		<!-- OTHERS -->
-		<kafka.version>2.0.0</kafka.version>
-		<confluent.version>5.0.0</confluent.version>
+		<kafka.version>2.0.1</kafka.version>
+		<confluent.version>5.0.1</confluent.version>
 		<powermock-tests-utils.version>1.6.6</powermock-tests-utils.version>
 		<commons-io.version>1.3.2</commons-io.version>
 		
