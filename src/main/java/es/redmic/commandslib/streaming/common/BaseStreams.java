@@ -65,6 +65,7 @@ public abstract class BaseStreams {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			@Override
 			public void run() {
+				logger.info("Parando stream por señal SIGTERM");
 				streams.close();
 			}
 		}));
