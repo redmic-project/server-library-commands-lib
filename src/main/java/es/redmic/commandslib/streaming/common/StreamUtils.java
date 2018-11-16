@@ -40,9 +40,6 @@ public class StreamUtils {
 		// config.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG,
 		// StreamsConfig.EXACTLY_ONCE);
 
-		config.put(StreamsConfig.RETRIES_CONFIG, 10);
-		config.put(StreamsConfig.RETRY_BACKOFF_MS_CONFIG, 200);
-		config.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, 605000);
 		config.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1); // commit as fast as possible
 
 		config.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
