@@ -100,7 +100,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		// Join por id, mandando a kafka el evento de éxito
 		createConfirmedEvents.join(createRequestEvents,
 				(confirmedEvent, requestEvent) -> getCreatedEvent(confirmedEvent, requestEvent),
-				JoinWindows.of(windowsTime)).to(topic);
+				JoinWindows.of(windowsTime)).filter((k, v) -> (v != null)).to(topic);
 	}
 
 	/*
@@ -137,7 +137,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		// Join por id, mandando a kafka el evento de éxito
 		updateConfirmedEvents.join(updateRequestEvents,
 				(confirmedEvent, requestEvent) -> getUpdatedEvent(confirmedEvent, requestEvent),
-				JoinWindows.of(windowsTime)).to(topic);
+				JoinWindows.of(windowsTime)).filter((k, v) -> (v != null)).to(topic);
 
 		processPartialUpdatedStream(events, updateConfirmedEvents);
 	}
