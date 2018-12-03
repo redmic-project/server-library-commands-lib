@@ -60,7 +60,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		processPostUpdateStream(events);
 
 		// extra process
-		processExtraStreams(events);
+		processExtraStreams(events, snapshotEvents);
 
 		return new KafkaStreams(builder.build(),
 				StreamUtils.baseStreamsConfig(bootstrapServers, stateStoreDir, serviceId, schemaRegistry));
@@ -250,8 +250,8 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	}
 
 	/*
-	 * Función para procesar eventos a partir del stream principal y que dependerá
-	 * del servicio que lo implemente
+	 * Función para procesar eventos a partir del stream principal y/o snapshot.
+	 * Dependerá del servicio que lo implemente
 	 */
-	protected abstract void processExtraStreams(KStream<String, Event> events);
+	protected abstract void processExtraStreams(KStream<String, Event> events, KStream<String, Event> snapshotEvents);
 }
