@@ -61,7 +61,7 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 			if (future != null) {
 				future.complete(ex);// future.complete(ex);
 			} else {
-				logger.info("Petición asíncrona no resgistrada");
+				logger.warn("Petición asíncrona no resgistrada para sessionId: " + sessionId);
 			}
 			return;
 		});

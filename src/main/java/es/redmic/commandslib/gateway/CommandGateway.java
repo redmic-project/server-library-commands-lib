@@ -21,7 +21,6 @@ public class CommandGateway implements ApplicationListener<BrokerEvent> {
 	protected KafkaTemplate<String, Event> kafkaTemplate;
 
 	public CommandGateway() {
-		logger.info("Arrancando command gateway");
 	}
 
 	@Override
@@ -31,7 +30,7 @@ public class CommandGateway implements ApplicationListener<BrokerEvent> {
 
 		String topic = brokerEvent.getTopic();
 
-		logger.info("sending payload='{}' to topic='{}'", evt, topic);
+		logger.debug("sending payload='{}' to topic='{}'", evt, topic);
 
 		ListenableFuture<SendResult<String, Event>> future = kafkaTemplate.send(topic, evt.getAggregateId(), evt);
 
