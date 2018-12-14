@@ -12,7 +12,7 @@
 	<groupId>es.redmic.lib</groupId>
 	<artifactId>commands-lib</artifactId>
 	<packaging>jar</packaging>
-	<version>0.6.0</version>
+	<version>0.7.0</version>
 	<name>commands-lib</name>
 	
 	<properties>
@@ -23,9 +23,9 @@
 		<java.version>1.8</java.version>
 
 		<!-- REDMIC -->
-		<redmic.models.version>0.6.0</redmic.models.version>
-		<redmic.broker-lib.version>0.6.0</redmic.broker-lib.version>
-		<redmic.rest-lib.version>0.6.0</redmic.rest-lib.version>
+		<redmic.models.version>0.7.0</redmic.models.version>
+		<redmic.broker-lib.version>0.7.0</redmic.broker-lib.version>
+		<redmic.rest-lib.version>0.7.0</redmic.rest-lib.version>
 
 		<!-- OTHERS -->
 		<kafka.version>2.0.1</kafka.version>
