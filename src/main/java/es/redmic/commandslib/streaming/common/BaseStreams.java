@@ -78,6 +78,7 @@ public abstract class BaseStreams {
 		logger.error(msg);
 		throwable.printStackTrace();
 		alertService.errorAlert(this.topic, msg);
+		streams.close();
 	}
 
 	/*
