@@ -238,7 +238,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		if (!(a.getSessionId().equals(b.getSessionId()))) {
 			String message = "Recibido evento de petición " + b.getType() + " con id de sesión " + b.getSessionId()
 					+ ", el cual es diferente al evento de confirmación " + a.getType() + " con id de sesión "
-					+ b.getSessionId() + " para item " + a.getAggregateId();
+					+ a.getSessionId() + " para item " + a.getAggregateId();
 			logger.error(message);
 			// alertService.errorAlert(a.getAggregateId(), message);
 			return false;
