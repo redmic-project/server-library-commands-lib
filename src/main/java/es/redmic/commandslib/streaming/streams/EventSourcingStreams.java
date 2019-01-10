@@ -246,7 +246,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 					+ a.getSessionId() + " para item " + b.getAggregateId() + "|" + b.getDate() + " ("
 					+ a.getAggregateId() + "|" + a.getDate() + ")";
 			logger.error(message);
-			// alertService.errorAlert(a.getAggregateId(), message);
+			alertService.errorAlert(a.getAggregateId(), message);
 			return false;
 		}
 		return true;
