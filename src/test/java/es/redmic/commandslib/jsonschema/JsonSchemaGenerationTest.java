@@ -16,12 +16,12 @@ import org.powermock.reflect.Whitebox;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.core.env.Environment;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 
 import es.redmic.commandslib.config.GenerateJsonSchemaScanBean;
+import es.redmic.jts4jackson.module.JTSModule;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JsonSchemaGenerationTest {
@@ -46,7 +46,7 @@ public class JsonSchemaGenerationTest {
 		Whitebox.setInternalState(jsonSchema, HashMap.class, properties);
 		Whitebox.invokeMethod(jsonSchema, "jsonSchemaGeneratorInit");
 		objectMapper.registerModule(new JodaModule());
-		objectMapper.registerModule(new JtsModule());
+		objectMapper.registerModule(new JTSModule());
 
 		objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 	}

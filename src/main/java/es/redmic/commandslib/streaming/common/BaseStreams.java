@@ -1,10 +1,12 @@
-package es.redmic.commandslib.streams;
+package es.redmic.commandslib.streaming.common;
 
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.state.QueryableStoreType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import es.redmic.commandslib.statestore.StreamConfig;
+import es.redmic.brokerlib.alert.AlertService;
 
 public abstract class BaseStreams {
 
@@ -26,13 +28,16 @@ public abstract class BaseStreams {
 
 	protected KafkaStreams streams;
 
-	public BaseStreams(StreamConfig config) {
+	protected AlertService alertService;
+
+	public BaseStreams(StreamConfig config, AlertService alertService) {
 		this.topic = config.getTopic();
 		this.stateStoreDir = config.getStateStoreDir();
 		this.serviceId = config.getServiceId();
 		this.bootstrapServers = config.getBootstrapServers();
 		this.schemaRegistry = config.getSchemaRegistry();
 		this.windowsTime = config.getWindowsTime();
+		this.alertService = alertService;
 	}
 
 	protected void init() {
@@ -60,15 +65,38 @@ public abstract class BaseStreams {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			@Override
 			public void run() {
+				logger.info("Parando stream por señal SIGTERM");
 				streams.close();
 			}
 		}));
 	}
 
 	private void uncaughtException(Thread thread, Throwable throwable) {
-		// TODO: Mandar alerta
-		logger.error("Error no conocido en kafka stream");
+
+		String msg = "Error no conocido en kafka stream. El stream dejará de funcionar "
+				+ throwable.getLocalizedMessage();
+		logger.error(msg);
 		throwable.printStackTrace();
+		alertService.errorAlert(this.topic, msg);
 		streams.close();
+	}
+
+	/*
+	 * En ocaciones el store se bloquea debido a operaciones de rebalanceo de kafka.
+	 * Esta función permite esperar hasta que sea accesible.
+	 */
+
+	protected static <T> T waitUntilStoreIsQueryable(final String storeName,
+			final QueryableStoreType<T> queryableStoreType, final KafkaStreams streams) {
+		while (true) {
+			try {
+				return streams.store(storeName, queryableStoreType);
+			} catch (InvalidStateStoreException ignored) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
+			}
+		}
 	}
 }

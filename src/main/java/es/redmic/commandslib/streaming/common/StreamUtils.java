@@ -1,4 +1,4 @@
-package es.redmic.commandslib.statestore;
+package es.redmic.commandslib.streaming.common;
 
 import java.util.Map;
 import java.util.Properties;
@@ -6,6 +6,7 @@ import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler;
 import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
 import org.apache.kafka.streams.state.RocksDBConfigSetter;
 import org.rocksdb.Options;
@@ -14,7 +15,12 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 
 public class StreamUtils {
 
-	protected final static String SCHEMA_REGISTRY_URL_PROPERTY = "schema.registry.url";
+	// @formatter:off
+
+	protected final static String SCHEMA_REGISTRY_URL_PROPERTY = "schema.registry.url",
+			SCHEMA_REGISTRY_VALUE_SUBJECT_NAME_STRATEGY = "value.subject.name.strategy";
+
+	// @formatter:on
 
 	public static Properties baseStreamsConfig(String bootstrapServers, String stateDir, String appId,
 			String schemaRegistry) {
@@ -26,14 +32,25 @@ public class StreamUtils {
 		config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 		config.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
 		config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+		config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50);
+		config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 300000);
+		config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 90000);
+
 		// config.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG,
 		// StreamsConfig.EXACTLY_ONCE);
+
 		config.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1); // commit as fast as possible
+
+		config.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+				LogAndContinueExceptionHandler.class);
 
 		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
 		config.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class.getName());
 		config.put(SCHEMA_REGISTRY_URL_PROPERTY, schemaRegistry);
+		config.put(SCHEMA_REGISTRY_VALUE_SUBJECT_NAME_STRATEGY,
+				"io.confluent.kafka.serializers.subject.TopicRecordNameStrategy");
 
 		return config;
 	}

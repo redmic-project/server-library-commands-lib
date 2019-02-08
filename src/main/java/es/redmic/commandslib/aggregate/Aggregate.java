@@ -6,7 +6,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.avro.common.Event;
-import es.redmic.brokerlib.avro.common.SimpleEvent;
+import es.redmic.brokerlib.avro.common.EventTypes;
+import es.redmic.commandslib.exceptions.HistoryNotFoundException;
+import es.redmic.commandslib.exceptions.ItemLockedException;
+import es.redmic.exception.data.ItemNotFoundException;
 
 public abstract class Aggregate {
 
@@ -17,6 +20,64 @@ public abstract class Aggregate {
 	private Integer version;
 
 	protected static Logger logger = LogManager.getLogger();
+
+	/*
+	 * Función que comprueba si el item ya existe
+	 */
+	protected boolean exist(String id) {
+
+		if (id != null) {
+			// comprueba que el id no exista
+			Event state = getItemFromStateStore(id);
+
+			if (state != null) {
+
+				loadFromHistory(state);
+
+				if (!isDeleted()) {
+					return true;
+				}
+				reset();
+			}
+		}
+		return false;
+	}
+
+	/*
+	 * Función para obtener el último estado del
+	 */
+	protected Event getStateFromHistory(String id) {
+
+		Event state = getItemFromStateStore(id);
+
+		if (state == null) {
+			logger.error("Intentando modificar(editar o eliminar) un elemento del cual no se tiene historial, ", id);
+			throw new HistoryNotFoundException(EventTypes.UPDATE + " | " + EventTypes.DELETE, id);
+		}
+
+		return state;
+	}
+
+	protected void checkState(String id, String eventType) {
+
+		if (this.deleted) {
+			logger.error("Intentando modificar un elemento eliminado, ", id);
+			throw new ItemNotFoundException("id", id);
+		}
+	}
+
+	protected void check(Event event) {
+
+		if (isLocked(event.getType()) && !event.getType().equals(EventTypes.DELETED)) {
+
+			// TODO: Si el tiempo entre el último y el actual es superior a el máximo del
+			// ciclo, compensar.
+
+			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ",
+					event.getAggregateId());
+			throw new ItemLockedException("id", event.getAggregateId());
+		}
+	}
 
 	public String getAggregateId() {
 		return aggregateId;
@@ -34,10 +95,20 @@ public abstract class Aggregate {
 		this.version = version;
 	}
 
-	protected void _apply(SimpleEvent event) {
+	public void apply(Event event) {
 		setVersion(event.getVersion());
 		setAggregateId(event.getAggregateId());
 	}
+
+	/*
+	 * Función que devuelve si el item específico está bloqueado
+	 */
+	protected abstract boolean isLocked(String eventType);
+
+	/*
+	 * Función que obtiene el item con id pasado en caso de existir.
+	 */
+	protected abstract Event getItemFromStateStore(String id);
 
 	/*
 	 * Función que a partir de todos los eventos generados sobre un item, aplica
