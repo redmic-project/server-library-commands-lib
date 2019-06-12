@@ -153,7 +153,7 @@ public class GenerateJsonSchemaScanBean implements ApplicationContextAware {
 
 		if (properties.isEmpty()) {
 			String serverPath = env.getProperty("server.servlet.context-path")
-					+ env.getProperty("spring.mvc.servlet.path");
+					+ env.getProperty("microservice.view.path");
 			for (Iterator it = ((AbstractEnvironment) env).getPropertySources().iterator(); it.hasNext();) {
 				PropertySource propertySource = (PropertySource) it.next();
 				if (propertySource instanceof MapPropertySource) {
