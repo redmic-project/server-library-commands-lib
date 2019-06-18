@@ -23,6 +23,7 @@ package es.redmic.commandslib.streaming.statestore;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 
@@ -55,5 +56,13 @@ public abstract class StateStore extends BaseStreams {
 	protected void postProcessStreams() {
 
 		this.store = waitUntilStoreIsQueryable(topic, QueryableStoreTypes.<String, Event>keyValueStore(), streams);
+	}
+
+	public Event get(String id) {
+		return this.store.get(id);
+	}
+
+	public KeyValueIterator<String, Event> getAll() {
+		return this.store.all();
 	}
 }
