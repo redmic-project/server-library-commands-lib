@@ -75,9 +75,6 @@ public abstract class EventSourcingStreams extends BaseStreams {
 		// Failed change
 		processFailedChangeStream(events, snapshotEvents);
 
-		// PostUpdate
-		processPostUpdateStream(events);
-
 		// extra process
 		processExtraStreams(events, snapshotEvents);
 
@@ -251,12 +248,6 @@ public abstract class EventSourcingStreams extends BaseStreams {
 	 */
 
 	protected abstract Event getDeleteCancelledEvent(Event failedEvent, Event lastSuccessEvent);
-
-	/*
-	 * Función para procesar modificaciones de referencias
-	 */
-
-	protected abstract void processPostUpdateStream(KStream<String, Event> events);
 
 	protected boolean isSameSession(Event a, Event b) {
 
