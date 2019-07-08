@@ -20,7 +20,7 @@
 		<redmic.models.version>0.10.0-feature-cleanAtlasComponents</redmic.models.version>
 		<redmic.broker-lib.version>0.10.0-feature-atlasMicroservice</redmic.broker-lib.version>
 		<redmic.rest-lib.version>0.8.0</redmic.rest-lib.version>
-
+		<redmic.user-settings-lib.version>0.1.0</redmic.user-settings-lib.version>
 		<!-- OTHERS -->
 		<kafka.version>2.0.1</kafka.version>
 		<confluent.version>5.0.1</confluent.version>
@@ -87,6 +87,13 @@
 			<groupId>es.redmic.lib</groupId>
 			<artifactId>rest-lib</artifactId>
 			<version>${redmic.rest-lib.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>es.redmic.lib</groupId>
+			<artifactId>user-settings-lib</artifactId>
+			<version>${redmic.user-settings-lib.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		
 		<dependency>
