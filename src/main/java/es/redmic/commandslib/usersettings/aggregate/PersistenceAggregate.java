@@ -30,7 +30,7 @@ import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.common.PersistenceCancelledEvent;
 import es.redmic.usersettingslib.events.common.PersistenceEvent;
-import es.redmic.usersettingslib.events.delete.DeleteSettingsEvent;
+import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
 import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
 
@@ -81,7 +81,7 @@ public class PersistenceAggregate extends Aggregate {
 		return evt;
 	}
 
-	public DeleteSettingsEvent process(DeleteSettingsCommand cmd) {
+	public CheckDeleteSettingsEvent process(DeleteSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -93,7 +93,7 @@ public class PersistenceAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
-		DeleteSettingsEvent evt = new DeleteSettingsEvent();
+		CheckDeleteSettingsEvent evt = new CheckDeleteSettingsEvent();
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
 		return evt;
