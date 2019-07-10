@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<parent>
@@ -14,7 +15,7 @@
 	<packaging>jar</packaging>
 	<version>0.9.0-feature-atlasMicroservice</version>
 	<name>commands-lib</name>
-	
+
 	<properties>
 		<!-- REDMIC -->
 		<redmic.models.version>0.10.0-feature-cleanAtlasComponents</redmic.models.version>
@@ -47,7 +48,7 @@
 				</exclusion>
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
-		    		<artifactId>jackson-databind</artifactId>
+					<artifactId>jackson-databind</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -68,7 +69,11 @@
 			</exclusions>
 		</dependency>
 
-
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
 		<!-- Redmic -->
 
 		<dependency>
@@ -88,34 +93,34 @@
 			<artifactId>rest-lib</artifactId>
 			<version>${redmic.rest-lib.version}</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>es.redmic.lib</groupId>
 			<artifactId>user-settings-lib</artifactId>
 			<version>${redmic.user-settings-lib.version}</version>
 			<scope>provided</scope>
 		</dependency>
-		
+
 		<dependency>
-		    <groupId>org.apache.commons</groupId>
-		    <artifactId>commons-io</artifactId>
-		    <version>${commons-io.version}</version>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
 		</dependency>
-		
+
 		<!-- Test -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<dependency>
-		    <groupId>org.powermock.tests</groupId>
-		    <artifactId>powermock-tests-utils</artifactId>
-		    <version>${powermock-tests-utils.version}</version>
-		    <scope>test</scope>
+			<groupId>org.powermock.tests</groupId>
+			<artifactId>powermock-tests-utils</artifactId>
+			<version>${powermock-tests-utils.version}</version>
+			<scope>test</scope>
 		</dependency>
-		
+
 	</dependencies>
 	<repositories>
 		<repository>
