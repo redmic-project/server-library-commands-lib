@@ -1,5 +1,7 @@
 package es.redmic.commandslib.usersettings.commands;
 
+import org.joda.time.DateTime;
+
 /*-
  * #%L
  * commands-lib
@@ -28,6 +30,9 @@ public class UpdateSettingsCommand extends Command {
 	private PersistenceDTO persistence;
 
 	public UpdateSettingsCommand(PersistenceDTO persistence) {
+
+		persistence.setUpdated(DateTime.now());
+
 		this.persistence = persistence;
 	}
 

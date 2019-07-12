@@ -1,5 +1,7 @@
 package es.redmic.commandslib.usersettings.commands;
 
+import org.joda.time.DateTime;
+
 /*-
  * #%L
  * commands-lib
@@ -28,6 +30,9 @@ public class ClearCommand extends Command {
 	private SelectionDTO selection;
 
 	public ClearCommand(SelectionDTO selection) {
+
+		selection.setUpdated(DateTime.now());
+
 		this.selection = selection;
 	}
 

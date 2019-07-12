@@ -22,6 +22,8 @@ package es.redmic.commandslib.usersettings.commands;
 
 import java.util.UUID;
 
+import org.joda.time.DateTime;
+
 import es.redmic.commandslib.commands.Command;
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.utils.SettingsUtil;
@@ -35,7 +37,11 @@ public class SaveSettingsCommand extends Command {
 		if (persistence.getId() == null) {
 			// Crea id único para settings cuando se trata de una nueva
 			persistence.setId(SettingsUtil.generateId(UUID.randomUUID().toString()));
+			persistence.setInserted(DateTime.now());
 		}
+
+		persistence.setUpdated(DateTime.now());
+
 		this.persistence = persistence;
 	}
 

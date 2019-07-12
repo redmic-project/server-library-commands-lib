@@ -22,6 +22,8 @@ package es.redmic.commandslib.usersettings.commands;
 
 import java.util.UUID;
 
+import org.joda.time.DateTime;
+
 import es.redmic.commandslib.commands.Command;
 import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.utils.SettingsUtil;
@@ -35,7 +37,11 @@ public class SelectCommand extends Command {
 		if (selection.getId() == null) {
 			// Crea id único para settings cuando se trata de una nueva
 			selection.setId(SettingsUtil.generateId(UUID.randomUUID().toString()));
+			selection.setInserted(DateTime.now());
 		}
+
+		selection.setUpdated(DateTime.now());
+
 		this.selection = selection;
 	}
 
