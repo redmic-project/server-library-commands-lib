@@ -1,5 +1,25 @@
 package es.redmic.commandslib.usersettings.persistence;
 
+/*-
+ * #%L
+ * commands-lib
+ * %%
+ * Copyright (C) 2019 REDMIC Project / Server
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -25,7 +45,7 @@ import es.redmic.exception.data.ItemNotFoundException;
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
-import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ProcessEventTest {
@@ -53,7 +73,7 @@ public class ProcessEventTest {
 
 		SaveSettingsCommand command = new SaveSettingsCommand(persistence);
 
-		SaveSettingsEvent evt = agg.process(command);
+		PartialSaveSettingsEvent evt = agg.process(command);
 
 		assertNotNull(evt);
 		assertNotNull(evt.getDate());
@@ -61,7 +81,7 @@ public class ProcessEventTest {
 		assertEquals(evt.getPersistence(), persistence);
 		assertNotNull(evt.getId());
 		assertEquals(evt.getAggregateId(), persistence.getId());
-		assertEquals(evt.getType(), SettingsEventTypes.SAVE);
+		assertEquals(evt.getType(), SettingsEventTypes.PARTIAL_SAVE);
 		assertTrue(evt.getVersion().equals(1));
 	}
 
@@ -74,7 +94,7 @@ public class ProcessEventTest {
 
 		UpdateSettingsCommand command = new UpdateSettingsCommand(persistence);
 
-		SaveSettingsEvent evt = agg.process(command);
+		PartialSaveSettingsEvent evt = agg.process(command);
 
 		assertNotNull(evt);
 		assertNotNull(evt.getDate());
@@ -82,7 +102,7 @@ public class ProcessEventTest {
 		assertEquals(evt.getPersistence(), persistence);
 		assertNotNull(evt.getId());
 		assertEquals(evt.getAggregateId(), persistence.getId());
-		assertEquals(evt.getType(), SettingsEventTypes.SAVE);
+		assertEquals(evt.getType(), SettingsEventTypes.PARTIAL_SAVE);
 		assertTrue(evt.getVersion().equals(2));
 	}
 

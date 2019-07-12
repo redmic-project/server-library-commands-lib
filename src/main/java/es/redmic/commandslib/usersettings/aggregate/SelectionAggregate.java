@@ -26,17 +26,17 @@ import es.redmic.commandslib.usersettings.commands.ClearCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
 import es.redmic.commandslib.usersettings.commands.SelectCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
-import es.redmic.usersettingslib.dto.SelectionDTO;
+import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
-import es.redmic.usersettingslib.events.clear.ClearEvent;
-import es.redmic.usersettingslib.events.common.SelectionCancelledEvent;
-import es.redmic.usersettingslib.events.common.SelectionEvent;
-import es.redmic.usersettingslib.events.deselect.DeselectEvent;
-import es.redmic.usersettingslib.events.select.SelectEvent;
+import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
+import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
+import es.redmic.usersettingslib.events.common.SettingsEvent;
+import es.redmic.usersettingslib.events.deselect.PartialDeselectEvent;
+import es.redmic.usersettingslib.events.select.PartialSelectEvent;
 
 public class SelectionAggregate extends Aggregate {
 
-	private SelectionDTO selection;
+	private SettingsDTO settings;
 
 	private SettingsStateStore settingsStateStore;
 
@@ -44,7 +44,7 @@ public class SelectionAggregate extends Aggregate {
 		this.settingsStateStore = settingsStateStore;
 	}
 
-	public SelectEvent process(SelectCommand cmd) {
+	public PartialSelectEvent process(SelectCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -57,13 +57,13 @@ public class SelectionAggregate extends Aggregate {
 
 		this.setAggregateId(id);
 
-		SelectEvent evt = new SelectEvent(cmd.getSelection());
+		PartialSelectEvent evt = new PartialSelectEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(1);
 		return evt;
 	}
 
-	public DeselectEvent process(DeselectCommand cmd) {
+	public PartialDeselectEvent process(DeselectCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -75,13 +75,13 @@ public class SelectionAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
-		DeselectEvent evt = new DeselectEvent(cmd.getSelection());
+		PartialDeselectEvent evt = new PartialDeselectEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
 		return evt;
 	}
 
-	public ClearEvent process(ClearCommand cmd) {
+	public PartialClearSelectionEvent process(ClearCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -93,14 +93,14 @@ public class SelectionAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
-		ClearEvent evt = new ClearEvent(cmd.getSelection());
+		PartialClearSelectionEvent evt = new PartialClearSelectionEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
 		return evt;
 	}
 
-	public SelectionDTO getSelection() {
-		return selection;
+	public SettingsDTO getSettings() {
+		return settings;
 	}
 
 	@Override
@@ -127,35 +127,35 @@ public class SelectionAggregate extends Aggregate {
 		switch (eventType) {
 		case "SELECTED":
 		case "DESELECTED":
-		case "CLEARED":
+		case "SELECTION_CLEARED":
 			logger.debug("Selección modificada");
-			apply((SelectionEvent) event);
+			apply((SettingsEvent) event);
 			break;
 		// CANCELLED
 		case "SELECT_CANCELLED":
 		case "DESELECT_CANCELLED":
 		case "CLEAR_CANCELLED":
 			logger.debug("Compensación por selección fallida");
-			apply((SelectionCancelledEvent) event);
+			apply((SettingsCancelledEvent) event);
 			break;
 		default:
 			logger.debug("Evento no manejado ", event.getType());
 		}
 	}
 
-	public void apply(SelectionEvent evt) {
+	public void apply(SettingsEvent evt) {
 		super.apply(evt);
-		selection = evt.getSelection();
+		settings = evt.getSettings();
 	}
 
-	public void apply(SelectionCancelledEvent evt) {
+	public void apply(SettingsCancelledEvent evt) {
 		super.apply(evt);
-		selection = evt.getSelection();
+		settings = evt.getSettings();
 	}
 
 	@Override
 	protected void reset() {
-		this.selection = null;
+		this.settings = null;
 		super.reset();
 	}
 }

@@ -38,11 +38,11 @@ import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.SettingsDataUtil;
 import es.redmic.commandslib.usersettings.aggregate.SelectionAggregate;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
-import es.redmic.usersettingslib.events.clear.ClearCancelledEvent;
-import es.redmic.usersettingslib.events.clear.ClearEvent;
-import es.redmic.usersettingslib.events.clear.ClearedEvent;
-import es.redmic.usersettingslib.events.common.SelectionCancelledEvent;
-import es.redmic.usersettingslib.events.common.SelectionEvent;
+import es.redmic.usersettingslib.events.clearselection.ClearSelectionCancelledEvent;
+import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
+import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
+import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
+import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectCancelledEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectedEvent;
@@ -90,7 +90,7 @@ public class ApplyEventTest {
 	@Test
 	public void applyClearedEvent_ChangeAggregateState_IfProcessIsOk() {
 
-		ClearedEvent evt = SettingsDataUtil.getClearedEvent(code);
+		SelectionClearedEvent evt = SettingsDataUtil.getClearedEvent(code);
 
 		agg.apply(evt);
 
@@ -120,7 +120,7 @@ public class ApplyEventTest {
 	@Test
 	public void applyClearCancelledEvent_ChangeAggrefateState_IfProcessIsOk() {
 
-		ClearCancelledEvent evt = SettingsDataUtil.getClearCancelledEvent(code);
+		ClearSelectionCancelledEvent evt = SettingsDataUtil.getClearCancelledEvent(code);
 
 		agg.apply(evt);
 
@@ -166,7 +166,7 @@ public class ApplyEventTest {
 	@Test
 	public void loadFromHistory_ChangeAggregateStateToCleared_IfEventIsCleared() {
 
-		ClearedEvent evt = SettingsDataUtil.getClearedEvent(code);
+		SelectionClearedEvent evt = SettingsDataUtil.getClearedEvent(code);
 
 		agg.loadFromHistory(evt);
 
@@ -176,7 +176,7 @@ public class ApplyEventTest {
 	@Test(expected = ItemLockedException.class)
 	public void loadFromHistory_ThrowItemLockedException_IfEventIsClear() {
 
-		ClearEvent evt = SettingsDataUtil.getClearEvent(code);
+		ClearSelectionEvent evt = SettingsDataUtil.getClearEvent(code);
 
 		agg.loadFromHistory(evt);
 	}
@@ -192,7 +192,7 @@ public class ApplyEventTest {
 
 		agg.loadFromHistory(history);
 
-		checkCancelledState((SelectionCancelledEvent) history.get(1));
+		checkCancelledState((SettingsCancelledEvent) history.get(1));
 	}
 
 	@Test
@@ -206,7 +206,7 @@ public class ApplyEventTest {
 
 		agg.loadFromHistory(history);
 
-		checkCancelledState((SelectionCancelledEvent) history.get(1));
+		checkCancelledState((SettingsCancelledEvent) history.get(1));
 	}
 
 	@Test
@@ -220,22 +220,22 @@ public class ApplyEventTest {
 
 		agg.loadFromHistory(history);
 
-		checkCancelledState((SelectionCancelledEvent) history.get(1));
+		checkCancelledState((SettingsCancelledEvent) history.get(1));
 	}
 
-	private void checkCancelledState(SelectionCancelledEvent evt) {
+	private void checkCancelledState(SettingsCancelledEvent evt) {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getSelection(), evt.getSelection());
+		assertEquals(agg.getSettings(), evt.getSettings());
 		assertFalse(agg.isDeleted());
 	}
 
-	private void checkSelectedDeselectedOrClearedState(SelectionEvent evt) {
+	private void checkSelectedDeselectedOrClearedState(SettingsEvent evt) {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getSelection(), evt.getSelection());
+		assertEquals(agg.getSettings(), evt.getSettings());
 		assertFalse(agg.isDeleted());
 	}
 }

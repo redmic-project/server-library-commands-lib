@@ -26,17 +26,17 @@ import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
-import es.redmic.usersettingslib.dto.PersistenceDTO;
+import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
-import es.redmic.usersettingslib.events.common.PersistenceCancelledEvent;
-import es.redmic.usersettingslib.events.common.PersistenceEvent;
+import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
+import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
-import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
 
 public class PersistenceAggregate extends Aggregate {
 
-	private PersistenceDTO persistence;
+	private SettingsDTO settings;
 
 	private SettingsStateStore settingsStateStore;
 
@@ -44,7 +44,7 @@ public class PersistenceAggregate extends Aggregate {
 		this.settingsStateStore = settingsStateStore;
 	}
 
-	public SaveSettingsEvent process(SaveSettingsCommand cmd) {
+	public PartialSaveSettingsEvent process(SaveSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -57,13 +57,13 @@ public class PersistenceAggregate extends Aggregate {
 
 		this.setAggregateId(id);
 
-		SaveSettingsEvent evt = new SaveSettingsEvent(cmd.getPersistence());
+		PartialSaveSettingsEvent evt = new PartialSaveSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
 		evt.setVersion(1);
 		return evt;
 	}
 
-	public SaveSettingsEvent process(UpdateSettingsCommand cmd) {
+	public PartialSaveSettingsEvent process(UpdateSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
 
@@ -75,7 +75,7 @@ public class PersistenceAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
-		SaveSettingsEvent evt = new SaveSettingsEvent(cmd.getPersistence());
+		PartialSaveSettingsEvent evt = new PartialSaveSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
 		return evt;
@@ -99,8 +99,8 @@ public class PersistenceAggregate extends Aggregate {
 		return evt;
 	}
 
-	public PersistenceDTO getPersistence() {
-		return persistence;
+	public SettingsDTO getSettings() {
+		return settings;
 	}
 
 	@Override
@@ -126,7 +126,7 @@ public class PersistenceAggregate extends Aggregate {
 		switch (eventType) {
 		case "SAVED":
 			logger.debug("Settings guardada");
-			apply((PersistenceEvent) event);
+			apply((SettingsEvent) event);
 			break;
 		case "DELETED":
 			logger.debug("Settings borrada");
@@ -136,16 +136,16 @@ public class PersistenceAggregate extends Aggregate {
 		case "SAVE_CANCELLED":
 		case "DELETE_CANCELLED":
 			logger.debug("Compensación por guardado/borrado fallido");
-			apply((PersistenceCancelledEvent) event);
+			apply((SettingsCancelledEvent) event);
 			break;
 		default:
 			logger.debug("Evento no manejado ", event.getType());
 		}
 	}
 
-	public void apply(PersistenceEvent evt) {
+	public void apply(SettingsEvent evt) {
 		super.apply(evt);
-		this.persistence = evt.getPersistence();
+		this.settings = evt.getSettings();
 	}
 
 	public void apply(SettingsDeletedEvent evt) {
@@ -153,14 +153,14 @@ public class PersistenceAggregate extends Aggregate {
 		this.deleted = true;
 	}
 
-	public void apply(PersistenceCancelledEvent evt) {
+	public void apply(SettingsCancelledEvent evt) {
 		super.apply(evt);
-		this.persistence = evt.getPersistence();
+		this.settings = evt.getSettings();
 	}
 
 	@Override
 	protected void reset() {
-		this.persistence = null;
+		this.settings = null;
 		super.reset();
 	}
 }

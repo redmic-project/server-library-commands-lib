@@ -39,8 +39,8 @@ import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.SettingsDataUtil;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
-import es.redmic.usersettingslib.events.common.PersistenceCancelledEvent;
-import es.redmic.usersettingslib.events.common.PersistenceEvent;
+import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
+import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCancelledEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
@@ -152,7 +152,7 @@ public class ApplyEventTest {
 
 		agg.loadFromHistory(history);
 
-		checkCancelledState((PersistenceCancelledEvent) history.get(1));
+		checkCancelledState((SettingsCancelledEvent) history.get(1));
 	}
 
 	@Test
@@ -166,22 +166,22 @@ public class ApplyEventTest {
 
 		agg.loadFromHistory(history);
 
-		checkCancelledState((PersistenceCancelledEvent) history.get(1));
+		checkCancelledState((SettingsCancelledEvent) history.get(1));
 	}
 
-	private void checkCancelledState(PersistenceCancelledEvent evt) {
+	private void checkCancelledState(SettingsCancelledEvent evt) {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getPersistence(), evt.getPersistence());
+		assertEquals(agg.getSettings(), evt.getSettings());
 		assertFalse(agg.isDeleted());
 	}
 
-	private void checkSavedState(PersistenceEvent evt) {
+	private void checkSavedState(SettingsEvent evt) {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getPersistence(), evt.getPersistence());
+		assertEquals(agg.getSettings(), evt.getSettings());
 		assertFalse(agg.isDeleted());
 	}
 

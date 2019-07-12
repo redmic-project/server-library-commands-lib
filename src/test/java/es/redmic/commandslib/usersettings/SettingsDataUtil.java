@@ -28,10 +28,11 @@ import org.joda.time.DateTime;
 
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.dto.SelectionDTO;
+import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
-import es.redmic.usersettingslib.events.clear.ClearCancelledEvent;
-import es.redmic.usersettingslib.events.clear.ClearEvent;
-import es.redmic.usersettingslib.events.clear.ClearedEvent;
+import es.redmic.usersettingslib.events.clearselection.ClearSelectionCancelledEvent;
+import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
+import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCancelledEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
@@ -61,7 +62,7 @@ public abstract class SettingsDataUtil {
 		evt.setType(SettingsEventTypes.SELECT);
 		evt.setVersion(1);
 		evt.setUserId(USER);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -69,7 +70,7 @@ public abstract class SettingsDataUtil {
 
 		SelectedEvent evt = new SelectedEvent().buildFrom(getSelectEvent(code));
 		evt.setType(SettingsEventTypes.SELECTED);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -77,7 +78,7 @@ public abstract class SettingsDataUtil {
 
 		SelectCancelledEvent evt = new SelectCancelledEvent().buildFrom(getSelectEvent(code));
 		evt.setType(SettingsEventTypes.SELECT_CANCELLED);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		evt.setExceptionType("ItemNotFound");
 		Map<String, String> arguments = new HashMap<String, String>();
 		arguments.put("a", "b");
@@ -94,7 +95,7 @@ public abstract class SettingsDataUtil {
 		evt.setType(SettingsEventTypes.SELECT);
 		evt.setVersion(1);
 		evt.setUserId(USER);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -102,7 +103,7 @@ public abstract class SettingsDataUtil {
 
 		DeselectedEvent evt = new DeselectedEvent().buildFrom(getDeselectEvent(code));
 		evt.setType(SettingsEventTypes.DESELECTED);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -110,7 +111,7 @@ public abstract class SettingsDataUtil {
 
 		DeselectCancelledEvent evt = new DeselectCancelledEvent().buildFrom(getDeselectEvent(code));
 		evt.setType(SettingsEventTypes.DESELECT_CANCELLED);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		evt.setExceptionType("ItemNotFound");
 		Map<String, String> arguments = new HashMap<String, String>();
 		arguments.put("a", "b");
@@ -120,30 +121,30 @@ public abstract class SettingsDataUtil {
 
 	// CLEAR
 
-	public static ClearEvent getClearEvent(String code) {
+	public static ClearSelectionEvent getClearEvent(String code) {
 
-		ClearEvent evt = new ClearEvent();
+		ClearSelectionEvent evt = new ClearSelectionEvent();
 		evt.setAggregateId(PREFIX + code);
-		evt.setType(SettingsEventTypes.CLEAR);
+		evt.setType(SettingsEventTypes.CLEAR_SELECTION);
 		evt.setVersion(1);
 		evt.setUserId(USER);
-		evt.setSelection(getSelectionDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
-	public static ClearedEvent getClearedEvent(String code) {
+	public static SelectionClearedEvent getClearedEvent(String code) {
 
-		ClearedEvent evt = new ClearedEvent().buildFrom(getClearEvent(code));
-		evt.setType(SettingsEventTypes.CLEARED);
-		evt.setSelection(getSelectionDTO(code));
+		SelectionClearedEvent evt = new SelectionClearedEvent().buildFrom(getClearEvent(code));
+		evt.setType(SettingsEventTypes.SELECTION_CLEARED);
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
-	public static ClearCancelledEvent getClearCancelledEvent(String code) {
+	public static ClearSelectionCancelledEvent getClearCancelledEvent(String code) {
 
-		ClearCancelledEvent evt = new ClearCancelledEvent().buildFrom(getClearEvent(code));
-		evt.setType(SettingsEventTypes.CLEAR_CANCELLED);
-		evt.setSelection(getSelectionDTO(code));
+		ClearSelectionCancelledEvent evt = new ClearSelectionCancelledEvent().buildFrom(getClearEvent(code));
+		evt.setType(SettingsEventTypes.CLEAR_SELECTION_CANCELLED);
+		evt.setSettings(getSettingsDTO(code));
 		evt.setExceptionType("ItemNotFound");
 		Map<String, String> arguments = new HashMap<String, String>();
 		arguments.put("a", "b");
@@ -160,7 +161,7 @@ public abstract class SettingsDataUtil {
 		evt.setType(SettingsEventTypes.SAVE);
 		evt.setVersion(1);
 		evt.setUserId(USER);
-		evt.setPersistence(getPersistenceDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -168,7 +169,7 @@ public abstract class SettingsDataUtil {
 
 		SettingsSavedEvent evt = new SettingsSavedEvent().buildFrom(getSaveSettingsEvent(code));
 		evt.setType(SettingsEventTypes.SAVED);
-		evt.setPersistence(getPersistenceDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		return evt;
 	}
 
@@ -176,7 +177,7 @@ public abstract class SettingsDataUtil {
 
 		SaveSettingsCancelledEvent evt = new SaveSettingsCancelledEvent().buildFrom(getSaveSettingsEvent(code));
 		evt.setType(SettingsEventTypes.SAVE_CANCELLED);
-		evt.setPersistence(getPersistenceDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		evt.setExceptionType("ItemNotFound");
 		Map<String, String> arguments = new HashMap<String, String>();
 		arguments.put("a", "b");
@@ -207,7 +208,7 @@ public abstract class SettingsDataUtil {
 
 		DeleteSettingsCancelledEvent evt = new DeleteSettingsCancelledEvent().buildFrom(getDeleteSettingsEvent(code));
 		evt.setType(SettingsEventTypes.DELETE_CANCELLED);
-		evt.setPersistence(getPersistenceDTO(code));
+		evt.setSettings(getSettingsDTO(code));
 		evt.setExceptionType("ItemNotFound");
 		Map<String, String> arguments = new HashMap<String, String>();
 		arguments.put("a", "b");
@@ -250,5 +251,26 @@ public abstract class SettingsDataUtil {
 		persistence.setUpdated(DateTime.now());
 		persistence.setAccessed(DateTime.now());
 		return persistence;
+	}
+
+	@SuppressWarnings("serial")
+	public static SettingsDTO getSettingsDTO(String code) {
+
+		SettingsDTO settings = new SettingsDTO();
+
+		settings.setId(PREFIX + code);
+		settings.setName("prueba");
+		settings.setService("prueba");
+		settings.setSelection(new ArrayList<String>() {
+			{
+				add("1");
+			}
+		});
+
+		settings.setInserted(DateTime.now());
+		settings.setUpdated(DateTime.now());
+		settings.setAccessed(DateTime.now());
+
+		return settings;
 	}
 }

@@ -45,9 +45,9 @@ import es.redmic.commandslib.usersettings.commands.SelectCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
-import es.redmic.usersettingslib.events.clear.ClearEvent;
-import es.redmic.usersettingslib.events.deselect.DeselectEvent;
-import es.redmic.usersettingslib.events.select.SelectEvent;
+import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
+import es.redmic.usersettingslib.events.deselect.PartialDeselectEvent;
+import es.redmic.usersettingslib.events.select.PartialSelectEvent;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ProcessEventTest {
@@ -75,7 +75,7 @@ public class ProcessEventTest {
 
 		SelectCommand command = new SelectCommand(selection);
 
-		SelectEvent evt = agg.process(command);
+		PartialSelectEvent evt = agg.process(command);
 
 		assertNotNull(evt);
 		assertNotNull(evt.getDate());
@@ -83,7 +83,7 @@ public class ProcessEventTest {
 		assertEquals(evt.getSelection(), selection);
 		assertNotNull(evt.getId());
 		assertEquals(evt.getAggregateId(), selection.getId());
-		assertEquals(evt.getType(), SettingsEventTypes.SELECT);
+		assertEquals(evt.getType(), SettingsEventTypes.PARTIAL_SELECT);
 		assertTrue(evt.getVersion().equals(1));
 	}
 
@@ -96,7 +96,7 @@ public class ProcessEventTest {
 
 		DeselectCommand command = new DeselectCommand(selection);
 
-		DeselectEvent evt = agg.process(command);
+		PartialDeselectEvent evt = agg.process(command);
 
 		assertNotNull(evt);
 		assertNotNull(evt.getDate());
@@ -104,7 +104,7 @@ public class ProcessEventTest {
 		assertEquals(evt.getSelection(), selection);
 		assertNotNull(evt.getId());
 		assertEquals(evt.getAggregateId(), selection.getId());
-		assertEquals(evt.getType(), SettingsEventTypes.DESELECT);
+		assertEquals(evt.getType(), SettingsEventTypes.PARTIAL_DESELECT);
 		assertTrue(evt.getVersion().equals(2));
 	}
 
@@ -117,7 +117,7 @@ public class ProcessEventTest {
 
 		ClearCommand command = new ClearCommand(selection);
 
-		ClearEvent evt = agg.process(command);
+		PartialClearSelectionEvent evt = agg.process(command);
 
 		assertNotNull(evt);
 		assertNotNull(evt.getDate());
@@ -125,7 +125,7 @@ public class ProcessEventTest {
 		assertEquals(evt.getSelection(), selection);
 		assertNotNull(evt.getId());
 		assertEquals(evt.getAggregateId(), selection.getId());
-		assertEquals(evt.getType(), SettingsEventTypes.CLEAR);
+		assertEquals(evt.getType(), SettingsEventTypes.PARTIAL_CLEAR_SELECTION);
 		assertTrue(evt.getVersion().equals(2));
 	}
 
