@@ -27,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.alert.AlertService;
+import es.redmic.brokerlib.avro.common.Event;
 
 public abstract class BaseStreams {
 
@@ -118,5 +119,19 @@ public abstract class BaseStreams {
 				}
 			}
 		}
+	}
+
+	protected boolean isSameSession(Event a, Event b) {
+
+		if (!(a.getSessionId().equals(b.getSessionId()))) {
+			String message = "Evento de petición " + b.getType() + " con id de sesión " + b.getSessionId()
+					+ ", el cual es diferente al evento de confirmación " + a.getType() + " con id de sesión "
+					+ a.getSessionId() + " para item " + b.getAggregateId() + "|" + b.getDate() + " ("
+					+ a.getAggregateId() + "|" + a.getDate() + ")";
+			logger.error(message);
+			alertService.errorAlert(a.getAggregateId(), message);
+			return false;
+		}
+		return true;
 	}
 }
