@@ -36,7 +36,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.exceptions.ItemLockedException;
-import es.redmic.commandslib.usersettings.SettingsDataUtil;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
@@ -47,6 +46,7 @@ import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
 import es.redmic.usersettingslib.events.save.SaveSettingsCancelledEvent;
 import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
 import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
+import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ApplyEventTest {

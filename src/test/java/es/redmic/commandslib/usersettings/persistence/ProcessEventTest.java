@@ -35,7 +35,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import es.redmic.commandslib.exceptions.ItemLockedException;
-import es.redmic.commandslib.usersettings.SettingsDataUtil;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
 import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
@@ -46,6 +45,7 @@ import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ProcessEventTest {

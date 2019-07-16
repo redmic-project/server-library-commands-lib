@@ -37,7 +37,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
-import es.redmic.commandslib.usersettings.SettingsDataUtil;
 import es.redmic.commandslib.usersettings.aggregate.SelectionAggregate;
 import es.redmic.commandslib.usersettings.commands.ClearCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
@@ -48,6 +47,7 @@ import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
 import es.redmic.usersettingslib.events.deselect.PartialDeselectEvent;
 import es.redmic.usersettingslib.events.select.PartialSelectEvent;
+import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ProcessEventTest {
