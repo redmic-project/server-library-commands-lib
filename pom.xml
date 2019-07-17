@@ -28,9 +28,39 @@
 		<kafka.version>2.0.1</kafka.version>
 		<confluent.version>5.0.1</confluent.version>
 		<commons-io.version>1.3.2</commons-io.version>
+		<mapstruct.version>1.3.0.Final</mapstruct.version>
 	</properties>
 
 	<dependencies>
+		
+		<!-- Redmic -->
+
+		<dependency>
+			<groupId>es.redmic.lib</groupId>
+			<artifactId>models</artifactId>
+			<version>${redmic.models.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>es.redmic.lib</groupId>
+			<artifactId>broker-lib</artifactId>
+			<version>${redmic.broker-lib.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>es.redmic.lib</groupId>
+			<artifactId>rest-lib</artifactId>
+			<version>${redmic.rest-lib.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>es.redmic.lib</groupId>
+			<artifactId>user-settings-lib</artifactId>
+			<version>${redmic.user-settings-lib.version}</version>
+		</dependency>
+		
+		<!-- OTHERS -->
+		
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
 			<artifactId>kafka-streams</artifactId>
@@ -75,37 +105,17 @@
 			<artifactId>javax.servlet-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		<!-- Redmic -->
-
-		<dependency>
-			<groupId>es.redmic.lib</groupId>
-			<artifactId>models</artifactId>
-			<version>${redmic.models.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>es.redmic.lib</groupId>
-			<artifactId>broker-lib</artifactId>
-			<version>${redmic.broker-lib.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>es.redmic.lib</groupId>
-			<artifactId>rest-lib</artifactId>
-			<version>${redmic.rest-lib.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>es.redmic.lib</groupId>
-			<artifactId>user-settings-lib</artifactId>
-			<version>${redmic.user-settings-lib.version}</version>
-			<scope>provided</scope>
-		</dependency>
 
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>${commons-io.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.mapstruct</groupId>
+			<artifactId>mapstruct</artifactId>
+			<version>${mapstruct.version}</version>
 		</dependency>
 
 		<!-- Test -->
