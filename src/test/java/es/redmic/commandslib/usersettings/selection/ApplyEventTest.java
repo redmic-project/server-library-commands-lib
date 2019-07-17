@@ -37,6 +37,7 @@ import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.aggregate.SelectionAggregate;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionCancelledEvent;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
 import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
@@ -227,7 +228,8 @@ public class ApplyEventTest {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getSettings(), evt.getSettings());
+		checkSettings(evt.getSettings());
+
 		assertFalse(agg.isDeleted());
 	}
 
@@ -235,7 +237,18 @@ public class ApplyEventTest {
 
 		assertEquals(agg.getVersion(), evt.getVersion());
 		assertEquals(agg.getAggregateId(), evt.getAggregateId());
-		assertEquals(agg.getSettings(), evt.getSettings());
+		checkSettings(evt.getSettings());
+
 		assertFalse(agg.isDeleted());
+	}
+
+	private void checkSettings(SettingsDTO settings) {
+
+		assertEquals(agg.getSettings().getId(), settings.getId());
+		assertEquals(agg.getSettings().getName(), settings.getName());
+		assertEquals(agg.getSettings().getService(), settings.getService());
+		assertEquals(agg.getSettings().getShared(), settings.getShared());
+		assertEquals(agg.getSettings().getSelection(), settings.getSelection());
+		assertEquals(agg.getSettings().getUserId(), settings.getUserId());
 	}
 }
