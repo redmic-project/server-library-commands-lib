@@ -46,6 +46,7 @@ import es.redmic.commandslib.usersettings.handler.SettingsCommandHandler;
  */
 
 import es.redmic.testutils.kafka.KafkaBaseIntegrationTest;
+import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
@@ -63,6 +64,12 @@ import es.redmic.usersettingslib.events.deselect.DeselectEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectFailedEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectedEvent;
 import es.redmic.usersettingslib.events.deselect.PartialDeselectEvent;
+import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.SaveSettingsCancelledEvent;
+import es.redmic.usersettingslib.events.save.SaveSettingsConfirmedEvent;
+import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.SaveSettingsFailedEvent;
+import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
 import es.redmic.usersettingslib.events.select.PartialSelectEvent;
 import es.redmic.usersettingslib.events.select.SelectCancelledEvent;
 import es.redmic.usersettingslib.events.select.SelectConfirmedEvent;
@@ -462,8 +469,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 	}
 
 	// Envía un evento de error de limpiar selección y debe provocar un evento
-	// selectionCleared
-	// con el item dentro
+	// clearSelectionCancelled con el item dentro
 	@Test
 	public void clearSelectionFailedEvent_SendClearSelectionCancelledEvent_IfReceivesSuccess() throws Exception {
 
@@ -485,6 +491,107 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(cancelled);
 		assertEquals(SettingsEventTypes.CLEAR_SELECTION_CANCELLED, cancelled.getType());
 		assertEquals(selectedEvent.getSettings().getSelection(),
+				((SettingsCancelledEvent) cancelled).getSettings().getSelection());
+	}
+
+	// Save settings
+
+	// Envía un evento parcial para guardar una selección existente y debe provocar
+	// un evento SaveSettings con settings dentro correspondientes a la selección
+	// enviada
+	@Test
+	public void partialSaveSettingsEvent_SendSaveSettingsEvent_IfReceivesSuccess() throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "15");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		PartialSaveSettingsEvent partialSaveEvent = SettingsDataUtil.getPartialSaveSettingsEvent(code + "16");
+
+		partialSaveEvent.getPersistence().setSettingsId(selectedEvent.getAggregateId());
+
+		kafkaTemplate.send(settings_topic, partialSaveEvent.getAggregateId(), partialSaveEvent);
+
+		Event save = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(save);
+		assertEquals(SettingsEventTypes.SAVE, save.getType());
+
+		PersistenceDTO persistenceInfoExpected = partialSaveEvent.getPersistence();
+		SettingsDTO settings = ((SettingsEvent) save).getSettings();
+
+		assertEquals(persistenceInfoExpected.getService(), settings.getService());
+		assertNotNull(settings.getService());
+
+		assertEquals(selectedEvent.getSettings().getSelection(), settings.getSelection());
+		assertEquals(persistenceInfoExpected.getShared(), settings.getShared());
+		assertEquals(persistenceInfoExpected.getName(), settings.getName());
+	}
+
+	// Envía un evento parcial para guardar selección existente y debe provocar un
+	// evento SaveSettingsFailed por no existir la selección de trabajo a guardar
+	@Test
+	public void partialSaveSettingsEvent_SendSaveSettingsFailedEvent_IfChangeSelectionNotExists() throws Exception {
+
+		PartialSaveSettingsEvent partialSaveSettingsEvent = SettingsDataUtil.getPartialSaveSettingsEvent(code + "17");
+		partialSaveSettingsEvent.getPersistence().setSettingsId("notExists");
+		kafkaTemplate.send(settings_topic, partialSaveSettingsEvent.getAggregateId(), partialSaveSettingsEvent);
+
+		Event failed = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(failed);
+		assertEquals(SettingsEventTypes.SAVE_FAILED, failed.getType());
+	}
+
+	// Envía un evento de confirmación de limpiar guardado y debe provocar un
+	// evento saved con settings dentro
+	@Test
+	public void saveConfirmedEvent_SendSavedEvent_IfReceivesSuccess() throws Exception {
+
+		// Envía save para meterlo en el stream
+		SaveSettingsEvent saveSettingsEvent = SettingsDataUtil.getSaveSettingsEvent(code + "18");
+		kafkaTemplate.send(settings_topic, saveSettingsEvent.getAggregateId(), saveSettingsEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		// Envía confirmed y espera un evento saved con la selección
+		SaveSettingsConfirmedEvent event = SettingsDataUtil.getSaveSettingsConfirmedEvent(code + "18");
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+		Event confirm = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(confirm);
+		assertEquals(SettingsEventTypes.SAVED, confirm.getType());
+
+		assertEquals(mapper.writeValueAsString(saveSettingsEvent.getSettings()),
+				mapper.writeValueAsString(((SettingsSavedEvent) confirm).getSettings()));
+	}
+
+	// Envía un evento de error de guardar selección y debe provocar un evento
+	// saveSettingsCancelled con el item dentro
+	@Test
+	public void saveSettingsFailedEvent_SendSaveSettingsCancelledEvent_IfReceivesSuccess() throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SettingsSavedEvent savedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "19");
+		kafkaTemplate.send(settings_topic, savedEvent.getAggregateId(), savedEvent);
+		blockingQueue.poll(20, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		SaveSettingsFailedEvent event = SettingsDataUtil.getSaveSettingsFailedEvent(code + "19");
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+		blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		Event cancelled = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		assertNotNull(cancelled);
+		assertEquals(SettingsEventTypes.SAVE_CANCELLED, cancelled.getType());
+		assertEquals(savedEvent.getSettings().getSelection(),
 				((SettingsCancelledEvent) cancelled).getSettings().getSelection());
 	}
 
@@ -564,6 +671,32 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 	public void clearSelectionCancelledEvent(ClearSelectionCancelledEvent clearSelectionCancelledEvent) {
 
 		blockingQueue.offer(clearSelectionCancelledEvent);
+	}
+
+	// Save
+
+	@KafkaHandler
+	public void settingsSavedEvent(SettingsSavedEvent settingsSavedEvent) {
+
+		blockingQueue.offer(settingsSavedEvent);
+	}
+
+	@KafkaHandler
+	public void saveSettingsEvent(SaveSettingsEvent saveSettingsEvent) {
+
+		blockingQueue.offer(saveSettingsEvent);
+	}
+
+	@KafkaHandler
+	public void saveSettingsFailedEvent(SaveSettingsFailedEvent saveSettingsFailedEvent) {
+
+		blockingQueue.offer(saveSettingsFailedEvent);
+	}
+
+	@KafkaHandler
+	public void saveSettingsCancelledEvent(SaveSettingsCancelledEvent saveSettingsCancelledEvent) {
+
+		blockingQueue.offer(saveSettingsCancelledEvent);
 	}
 
 	@KafkaHandler(isDefault = true)
