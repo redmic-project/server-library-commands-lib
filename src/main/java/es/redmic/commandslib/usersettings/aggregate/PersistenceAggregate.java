@@ -1,5 +1,7 @@
 package es.redmic.commandslib.usersettings.aggregate;
 
+import org.mapstruct.factory.Mappers;
+
 /*-
  * #%L
  * commands-lib
@@ -28,11 +30,13 @@ import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
+import es.redmic.usersettingslib.events.common.PersistenceEvent;
 import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
 import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.mapper.SettingsMapper;
 
 public class PersistenceAggregate extends Aggregate {
 
@@ -142,6 +146,11 @@ public class PersistenceAggregate extends Aggregate {
 		default:
 			logger.debug("Evento no manejado ", event.getType());
 		}
+	}
+
+	public void apply(PersistenceEvent evt) {
+		super.apply(evt);
+		settings = Mappers.getMapper(SettingsMapper.class).map(evt.getPersistence());
 	}
 
 	public void apply(SettingsEvent evt) {
