@@ -55,7 +55,6 @@ import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEven
 import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCancelledEvent;
-import es.redmic.usersettingslib.events.delete.DeleteSettingsCheckFailedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCheckedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsConfirmedEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
@@ -71,7 +70,7 @@ import es.redmic.usersettingslib.events.select.SelectedEvent;
 
 @Component
 @ConditionalOnProperty(name = "redmic.user-settings.enabled", havingValue = "true")
-@KafkaListener(topics = "${broker.topic.theme-inspire}")
+@KafkaListener(topics = "${broker.topic.settings}")
 public class SettingsCommandHandler extends CommandHandler {
 
 	@Value("${spring.kafka.properties.schema.registry.url}")
@@ -424,13 +423,6 @@ public class SettingsCommandHandler extends CommandHandler {
 		// El evento settingsDeleted se envía desde el stream
 
 		resolveCommand(event.getSessionId());
-	}
-
-	@KafkaHandler
-	private void listen(DeleteSettingsCheckFailedEvent event) {
-
-		publishToKafka(SettingsEventFactory.getEvent(event, SettingsEventTypes.DELETE_CANCELLED,
-				event.getExceptionType(), event.getArguments()), settingsTopic);
 	}
 
 	@KafkaHandler
