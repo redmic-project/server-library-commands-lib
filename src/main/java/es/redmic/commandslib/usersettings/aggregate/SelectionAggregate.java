@@ -135,7 +135,7 @@ public class SelectionAggregate extends Aggregate {
 		// CANCELLED
 		case "SELECT_CANCELLED":
 		case "DESELECT_CANCELLED":
-		case "CLEAR_CANCELLED":
+		case "CLEAR_SELECTION_CANCELLED":
 			logger.debug("Compensación por selección fallida");
 			apply((SettingsCancelledEvent) event);
 			break;
