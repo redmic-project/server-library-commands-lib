@@ -51,8 +51,9 @@ public class PersistenceAggregate extends Aggregate {
 		String id = cmd.getPersistence().getId();
 
 		if (exist(id)) {
-			logger.info("Descartando selección " + id + ". Ya está registrado.");
-			return null; // Se lanza excepción en el origen no aquí
+			Event state = getStateFromHistory(id);
+			loadFromHistory(state);
+			checkState(id, state.getType());
 		}
 
 		this.setAggregateId(id);
