@@ -213,7 +213,7 @@ public class SettingsEventStreams extends BaseStreams {
 
 		SettingsDTO settings = ((SettingsEvent) requestEvent).getSettings();
 
-		return SettingsEventFactory.getEvent(requestEvent, SettingsEventTypes.SELECTED, settings);
+		return SettingsEventFactory.getEvent(confirmedEvent, SettingsEventTypes.SELECTED, settings);
 	}
 
 	// Deselect
@@ -283,7 +283,7 @@ public class SettingsEventStreams extends BaseStreams {
 
 		SettingsDTO settings = ((SettingsEvent) requestEvent).getSettings();
 
-		return SettingsEventFactory.getEvent(requestEvent, SettingsEventTypes.DESELECTED, settings);
+		return SettingsEventFactory.getEvent(confirmedEvent, SettingsEventTypes.DESELECTED, settings);
 	}
 
 	private void processDeselectFailedStream(KStream<String, Event> events, KTable<String, Event> snapshotKTable) {
@@ -381,7 +381,7 @@ public class SettingsEventStreams extends BaseStreams {
 
 		SettingsDTO settings = ((SettingsEvent) requestEvent).getSettings();
 
-		return SettingsEventFactory.getEvent(requestEvent, SettingsEventTypes.SELECTION_CLEARED, settings);
+		return SettingsEventFactory.getEvent(confirmedEvent, SettingsEventTypes.SELECTION_CLEARED, settings);
 	}
 
 	private void processClearSelectionFailedStream(KStream<String, Event> events,
@@ -508,7 +508,7 @@ public class SettingsEventStreams extends BaseStreams {
 
 		SettingsDTO settings = ((SettingsEvent) requestEvent).getSettings();
 
-		return SettingsEventFactory.getEvent(requestEvent, SettingsEventTypes.SAVED, settings);
+		return SettingsEventFactory.getEvent(confirmedEvent, SettingsEventTypes.SAVED, settings);
 	}
 
 	// Delete
