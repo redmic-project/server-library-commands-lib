@@ -46,7 +46,7 @@ import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.commandslib.usersettings.streams.SettingsEventStreams;
 import es.redmic.exception.factory.ExceptionFactory;
-import es.redmic.restlib.common.service.UserUtilsServiceItfc;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventFactory;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
@@ -97,7 +97,7 @@ public class SettingsCommandHandler extends CommandHandler {
 	private SettingsStateStore settingsStateStore;
 
 	@Autowired
-	UserUtilsServiceItfc userService;
+	UserService userService;
 
 	@Autowired
 	AlertService alertService;
@@ -144,7 +144,10 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
+		String userId = userService.getUserId();
+
+		event.setUserId(userId);
+		event.getSelection().setUserId(userId);
 
 		// Se aplica el evento
 		agg.apply(event);
@@ -175,7 +178,13 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
+		String userId = userService.getUserId();
+
+		event.setUserId(userId);
+		event.getSelection().setUserId(userId);
+
+		event.setUserId(userId);
+		event.getSelection().setUserId(userId);
 
 		// Se aplica el evento
 		agg.apply(event);
@@ -206,7 +215,10 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
+		String userId = userService.getUserId();
+
+		event.setUserId(userId);
+		event.getSelection().setUserId(userId);
 
 		// Se aplica el evento
 		agg.apply(event);
@@ -237,7 +249,10 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
+		String userId = userService.getUserId();
+
+		event.setUserId(userId);
+		event.getPersistence().setUserId(userId);
 
 		// Se aplica el evento
 		agg.apply(event);
@@ -268,7 +283,10 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
+		String userId = userService.getUserId();
+
+		event.setUserId(userId);
+		event.getPersistence().setUserId(userId);
 
 		// Se aplica el evento
 		agg.apply(event);
