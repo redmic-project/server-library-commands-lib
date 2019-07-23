@@ -30,6 +30,7 @@ import org.mapstruct.factory.Mappers;
 import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.brokerlib.avro.common.EventError;
+import es.redmic.brokerlib.avro.common.EventTypes;
 import es.redmic.commandslib.streaming.common.BaseStreams;
 import es.redmic.commandslib.streaming.common.StreamConfig;
 import es.redmic.commandslib.streaming.common.StreamUtils;
@@ -97,6 +98,8 @@ public class SettingsEventStreams extends BaseStreams {
 		processSaveSettingsFailedStream(events, snapshotKTable);
 
 		processCheckDeleteSettings(events, snapshotKTable);
+
+		processDeleteFailedStream(events, snapshotKTable);
 
 		return new KafkaStreams(builder.build(),
 				StreamUtils.baseStreamsConfig(bootstrapServers, stateStoreDir, serviceId, schemaRegistry));
@@ -458,11 +461,15 @@ public class SettingsEventStreams extends BaseStreams {
 
 		assert failedEvent.getType().equals(SettingsEventTypes.SAVE_FAILED);
 
-		assert SettingsEventTypes.isSnapshot(snapshotEvent.getType());
+		assert snapshotEvent == null || SettingsEventTypes.isSnapshot(snapshotEvent.getType());
 
 		EventError eventError = (EventError) failedEvent;
 
-		SettingsDTO settings = ((SettingsEvent) snapshotEvent).getSettings();
+		SettingsDTO settings = null;
+
+		if (snapshotEvent != null) {
+			settings = ((SettingsEvent) snapshotEvent).getSettings();
+		}
 
 		return SettingsEventFactory.getEvent(failedEvent, SettingsEventTypes.SAVE_CANCELLED, settings,
 				eventError.getExceptionType(), eventError.getArguments());
@@ -532,6 +539,31 @@ public class SettingsEventStreams extends BaseStreams {
 		// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 		return SettingsEventFactory.getEvent(evt, SettingsEventTypes.CHECK_DELETE_FAILED,
 				ExceptionType.ES_SELECTION_WORK.toString(), null);
+	}
+
+	private void processDeleteFailedStream(KStream<String, Event> events, KTable<String, Event> snapshotKTable) {
+
+		// Stream filtrado por eventos de fallo al borrar
+		KStream<String, Event> failedEvents = events
+				.filter((id, event) -> (EventTypes.DELETE_FAILED.equals(event.getType())));
+
+		// Join por id, mandando a kafka el evento de compensación
+		failedEvents.join(snapshotKTable,
+				(failedEvent, snapshotEvent) -> getDeleteCancelledEvent(failedEvent, snapshotEvent)).to(topic);
+	}
+
+	private Event getDeleteCancelledEvent(Event failedEvent, Event snapshotEvent) {
+
+		assert failedEvent.getType().equals(SettingsEventTypes.DELETE_FAILED);
+
+		assert SettingsEventTypes.isSnapshot(snapshotEvent.getType());
+
+		SettingsDTO settings = ((SettingsEvent) snapshotEvent).getSettings();
+
+		EventError eventError = (EventError) failedEvent;
+
+		return SettingsEventFactory.getEvent(failedEvent, SettingsEventTypes.DELETE_CANCELLED, settings,
+				eventError.getExceptionType(), eventError.getArguments());
 	}
 
 	private boolean changeSelectionIsGranted(SettingsDTO settings, SelectionDTO newSelection) {
