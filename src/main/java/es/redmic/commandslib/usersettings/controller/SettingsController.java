@@ -1,5 +1,7 @@
 package es.redmic.commandslib.usersettings.controller;
 
+import javax.annotation.PostConstruct;
+
 /*-
  * #%L
  * commands-lib
@@ -23,6 +25,7 @@ package es.redmic.commandslib.usersettings.controller;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -34,7 +37,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.HandlerMapping;
 
 import es.redmic.commandslib.usersettings.service.SettingsService;
 import es.redmic.exception.data.ItemAlreadyExistException;
@@ -52,9 +54,22 @@ public class SettingsController {
 
 	private SettingsService service;
 
+	@Value("${spring.mvc.servlet.path}")
+	String microServicePath;
+
+	@Value("${controller.mapping.SETTINGS}")
+	String controllerPath;
+
+	String serviceName;
+
 	public SettingsController(SettingsService service) {
 		super();
 		this.service = service;
+	}
+
+	@PostConstruct
+	public void postConstructSettingsController() {
+		serviceName = microServicePath + controllerPath;
 	}
 
 	@PostMapping(value = "/select", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -64,7 +79,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 
 		SettingsDTO result = service.select(dto);
 
@@ -82,7 +97,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 		dto.setId(id);
 
 		return new BodyItemDTO<SettingsDTO>(service.select(id, dto));
@@ -96,7 +111,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 		dto.setId(id);
 
 		return new BodyItemDTO<SettingsDTO>(service.deselect(id, dto));
@@ -110,7 +125,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 		dto.setId(id);
 
 		return new BodyItemDTO<SettingsDTO>(service.clear(id, dto));
@@ -123,7 +138,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 
 		SettingsDTO result = service.create(dto);
 
@@ -141,7 +156,7 @@ public class SettingsController {
 		if (errorDto.hasErrors())
 			throw new DTONotValidException(errorDto);
 
-		dto.setService(getServiceName(request));
+		dto.setService(serviceName);
 		dto.setId(id);
 
 		return new BodyItemDTO<SettingsDTO>(service.update(id, dto));
@@ -152,10 +167,5 @@ public class SettingsController {
 	public SuperDTO delete(@PathVariable("id") String id) {
 		service.delete(id);
 		return new SuperDTO(true);
-	}
-
-	private String getServiceName(HttpServletRequest request) {
-
-		return (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
 	}
 }
