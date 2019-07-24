@@ -49,7 +49,7 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 
 	protected ApplicationEventPublisher eventPublisher;
 
-	protected Map<String, CompletableFuture<BaseException>> completableFeatures = new HashMap<>();
+	protected Map<String, CompletableFuture<Object>> completableFeatures = new HashMap<>();
 
 	@Override
 	public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
@@ -71,15 +71,15 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		resolveCommand(sessionId, null);
 	}
 
-	protected void resolveCommand(String sessionId, BaseException ex) {
+	protected void resolveCommand(String sessionId, Object result) {
 
 		// Si el evento es una excepción se resuelve con ella, si no, con null que
 		// significa que todo fue bien
 		Executors.newCachedThreadPool().submit(() -> {
-			CompletableFuture<BaseException> future = completableFeatures.get(sessionId);
+			CompletableFuture<Object> future = completableFeatures.get(sessionId);
 
 			if (future != null) {
-				future.complete(ex);// future.complete(ex);
+				future.complete(result);
 			} else {
 				logger.warn("Petición asíncrona no resgistrada para sessionId: " + sessionId);
 			}
@@ -88,23 +88,24 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 	}
 
 	// Crea un completableFuture para esperar por el evento de confirmación o error.
-	protected <T> CompletableFuture<T> getCompletableFeature(String sessionId, T item) {
+	protected <T> CompletableFuture<T> getCompletableFeature(String sessionId) {
 
 		// Añade espera para resolver la petición
-		CompletableFuture<BaseException> future = new CompletableFuture<BaseException>();
+		CompletableFuture<Object> future = new CompletableFuture<Object>();
 		completableFeatures.put(sessionId, future);
 		// Cuando se resuelve la espera, se resuelve con el dto
-		return future.thenApplyAsync(ex -> apply(ex, item));
+		return future.thenApplyAsync(obj -> apply(obj));
 	}
 
-	private <T> T apply(BaseException ex, T item) {
+	@SuppressWarnings("unchecked")
+	private <T> T apply(Object result) {
 
-		if (ex == null) {
+		if (!(result instanceof BaseException)) {
 			logger.debug("Resolver con éxito");
-			return item;
+			return (T) result;
 		} else {
 			logger.debug("Error. Lanzar excepción.");
-			throw ex;
+			throw (BaseException) result;
 		}
 	}
 
