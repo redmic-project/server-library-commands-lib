@@ -1,7 +1,9 @@
 package es.redmic.commandslib.usersettings.common;
 
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,6 +30,7 @@ import org.springframework.http.MediaType;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -47,8 +50,10 @@ import es.redmic.usersettingslib.events.deselect.DeselectConfirmedEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectEvent;
 import es.redmic.usersettingslib.events.save.SaveSettingsConfirmedEvent;
 import es.redmic.usersettingslib.events.save.SaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
 import es.redmic.usersettingslib.events.select.SelectConfirmedEvent;
 import es.redmic.usersettingslib.events.select.SelectEvent;
+import es.redmic.usersettingslib.events.select.SelectedEvent;
 import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 /*-
@@ -73,13 +78,19 @@ import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 public class SettingsRestBase extends DocumentationCommandBaseTest {
 
-	private final String CODE = UUID.randomUUID().toString();
-
 	@Value("${documentation.MICROSERVICE_HOST}")
 	private String HOST;
 
 	@Value("${controller.mapping.SETTINGS}")
 	private String SETTINGS_PATH;
+
+	@Value("${spring.mvc.servlet.path}")
+	String microServiceName;
+
+	@Value("${controller.mapping.SETTINGS}")
+	String controllerName;
+
+	String serviceName;
 
 	@Autowired
 	SettingsCommandHandler settingsCommandHandler;
@@ -94,6 +105,8 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	@Value("${broker.topic.settings}")
 	private String settings_topic;
 
+	private String userId = "13";
+
 	@BeforeClass
 	public static void setup() {
 
@@ -102,6 +115,8 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 	@Before
 	public void before() {
+
+		serviceName = microServiceName + controllerName;
 
 		settingsStateStore = Mockito.mock(SettingsStateStore.class);
 
@@ -122,13 +137,15 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	@Test
 	public void selectInNewSelectionRequest_ReturnSelection_IfWasSuccess() throws Exception {
 
+		String CODE = UUID.randomUUID().toString();
+
 		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
 
+		selectionDTO.setId(null);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
 		// @formatter:off
-		
-		//TODO: añadir check de selection, etc
-		
-		String id = SettingsDataUtil.PREFIX + CODE;
 		
 		this.mockMvc
 				.perform(post(SETTINGS_PATH + "/select")
@@ -139,8 +156,11 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
-				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(selectionDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
 		
 		// @formatter:on
 
@@ -150,23 +170,32 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertNotNull(event);
 		assertEquals(event.getType(), expectedEvent.getType());
 		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(event.getSettings().getService(), serviceName);
 	}
 
 	@Test
 	public void selectRequest_ReturnSelection_IfWasSuccess() throws Exception {
 
-		when(settingsStateStore.get(anyString())).thenReturn(SettingsDataUtil.getSelectEvent(CODE));
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
 
 		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
 
 		// @formatter:off
 		
-		//TODO: añadir check de selection, etc
-		
 		String id = SettingsDataUtil.PREFIX + CODE;
 		
-		this.mockMvc
+		MvcResult result = this.mockMvc
 				.perform(put(SETTINGS_PATH + "/select/" + id)
 						.header("Authorization", "Bearer " + getTokenOAGUser())
 						.content(mapper.writeValueAsString(selectionDTO))
@@ -176,7 +205,13 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
 				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(selectionDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1"))).andReturn();
+		
+		System.out.println("select " + result.getResponse().getContentAsString());
 		
 		// @formatter:on
 
@@ -186,19 +221,28 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertNotNull(event);
 		assertEquals(event.getType(), expectedEvent.getType());
 		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(event.getSettings().getService(), serviceName);
 	}
 
 	@Test
 	public void deselectRequest_ReturnSelection_IfWasSuccess() throws Exception {
 
-		when(settingsStateStore.get(anyString())).thenReturn(SettingsDataUtil.getSelectEvent(CODE));
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
 
 		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
 
 		// @formatter:off
-		
-		//TODO: añadir check de selection, etc
 		
 		String id = SettingsDataUtil.PREFIX + CODE;
 		
@@ -212,31 +256,42 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
 				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(selectionDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(0)));
 		
 		// @formatter:on
 
-		SelectEvent event = (SelectEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
+		DeselectEvent event = (DeselectEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
 
-		SelectEvent expectedEvent = SettingsDataUtil.getSelectEvent(CODE);
+		DeselectEvent expectedEvent = SettingsDataUtil.getDeselectEvent(CODE);
 		assertNotNull(event);
-		assertEquals(event.getType(), expectedEvent.getType());
-		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
 	}
 
 	@Test
 	public void clearRequest_ReturnSelection_IfWasSuccess() throws Exception {
 
-		when(settingsStateStore.get(anyString())).thenReturn(SettingsDataUtil.getSelectEvent(CODE));
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
 
 		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
-
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
 		selectionDTO.getSelection().clear();
 
 		// @formatter:off
-		
-		//TODO: añadir check de selection, etc
 		
 		String id = SettingsDataUtil.PREFIX + CODE;
 		
@@ -250,7 +305,10 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
 				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(selectionDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(0)));
 		
 		// @formatter:on
 
@@ -258,21 +316,27 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		ClearSelectionEvent expectedEvent = SettingsDataUtil.getClearEvent(CODE);
 		assertNotNull(event);
-		assertEquals(event.getType(), expectedEvent.getType());
-		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
 	}
 
 	@Test
 	public void saveRequest_ReturnSavedItem_IfWasSuccess() throws Exception {
 
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(UUID.randomUUID().toString());
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		String CODE = UUID.randomUUID().toString();
+
 		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(CODE);
+		persistenceDTO.setSettingsId(evt.getAggregateId());
 
 		// @formatter:off
-		
-		//TODO: añadir check de selection, etc
-		
-		String id = SettingsDataUtil.PREFIX + CODE;
 		
 		this.mockMvc
 				.perform(post(SETTINGS_PATH)
@@ -283,8 +347,11 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
-				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(persistenceDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1"))).andReturn();
 		
 		// @formatter:on
 
@@ -292,21 +359,35 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		SaveSettingsEvent expectedEvent = SettingsDataUtil.getSaveSettingsEvent(CODE);
 		assertNotNull(event);
-		assertEquals(event.getType(), expectedEvent.getType());
-		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
 	}
 
 	@Test
 	public void updateRequest_ReturnUpdatedItem_IfWasSuccess() throws Exception {
 
-		when(settingsStateStore.get(anyString())).thenReturn(SettingsDataUtil.getSettingsSavedEvent(CODE));
+		SelectedEvent selectedEvt = SettingsDataUtil.getSelectedEvent(UUID.randomUUID().toString());
+		selectedEvt.getSettings().setName(null);
+		selectedEvt.getSettings().setService(serviceName);
+		selectedEvt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, selectedEvt.getAggregateId(), selectedEvt);
+
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
 
 		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(CODE);
+		persistenceDTO.setSettingsId(evt.getAggregateId());
 
 		// @formatter:off
-		
-		//TODO: añadir check de selection, etc
 		
 		String id = SettingsDataUtil.PREFIX + CODE;
 		
@@ -320,23 +401,36 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.success", is(true)))
 				.andExpect(jsonPath("$.body", notNullValue()))
 				.andExpect(jsonPath("$.body.id", is(id)))
-				.andExpect(jsonPath("$.body.service", is(persistenceDTO.getService())));
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1"))).andReturn();
 		
 		// @formatter:on
 
 		SaveSettingsEvent event = (SaveSettingsEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
 
 		SaveSettingsEvent expectedEvent = SettingsDataUtil.getSaveSettingsEvent(CODE);
+
 		assertNotNull(event);
-		assertEquals(event.getType(), expectedEvent.getType());
-		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getSettings().getService(), expectedEvent.getSettings().getService());
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals((Integer) (expectedEvent.getVersion() + 1), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
 	}
 
 	@Test
 	public void deleteRequest_ReturnSuccessItem_IfWasSuccess() throws Exception {
 
-		when(settingsStateStore.get(anyString())).thenReturn(SettingsDataUtil.getSettingsSavedEvent(CODE));
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId("13");
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
 
 		// @formatter:off
 		
@@ -356,9 +450,8 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		DeleteSettingsEvent expectedEvent = SettingsDataUtil.getDeleteSettingsEvent(CODE);
 		assertNotNull(event);
-		assertEquals(event.getType(), expectedEvent.getType());
-		assertEquals(event.getVersion(), expectedEvent.getVersion());
-		assertEquals(event.getAggregateId(), expectedEvent.getAggregateId());
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
 	}
 
 	@KafkaHandler
@@ -422,5 +515,10 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		future.addCallback(new SendListener());
 
 		blockingQueue.offer(deleteSettingsEvent);
+	}
+
+	@KafkaHandler(isDefault = true)
+	public void defaultEvent(Object def) {
+
 	}
 }
