@@ -1,5 +1,8 @@
 package es.redmic.commandslib.usersettings.streams;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 
@@ -146,7 +149,12 @@ public class SettingsEventStreams extends BaseStreams {
 						ExceptionType.ES_SELECTION_WORK.toString(), null);
 			}
 
-			settings.getSelection().addAll(newSelection.getSelection());
+			Set<String> set = new LinkedHashSet<>();
+
+			set.addAll(newSelection.getSelection());
+			set.addAll(settings.getSelection());
+			settings.getSelection().clear();
+			settings.getSelection().addAll(set);
 
 			return SettingsEventFactory.getEvent(partialSelectEvent, SettingsEventTypes.SELECT, settings);
 		}
