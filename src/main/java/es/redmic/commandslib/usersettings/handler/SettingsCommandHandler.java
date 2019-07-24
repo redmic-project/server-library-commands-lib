@@ -155,8 +155,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -192,8 +191,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -226,8 +224,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -260,8 +257,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -294,8 +290,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -325,8 +320,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId(),
-				agg.getSettings());
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
 
 		// Emite evento para enviar a kafka
 		publishToKafka(event, settingsTopic);
@@ -344,7 +338,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		// El evento selected se envía desde el stream
 
-		resolveCommand(event.getSessionId());
+		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
@@ -365,7 +359,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		// El evento deselected se envía desde el stream
 
-		resolveCommand(event.getSessionId());
+		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
@@ -386,7 +380,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		// El evento selectionCleared se envía desde el stream
 
-		resolveCommand(event.getSessionId());
+		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
@@ -407,7 +401,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		// El evento settingsSaved se envía desde el stream
 
-		resolveCommand(event.getSessionId());
+		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler

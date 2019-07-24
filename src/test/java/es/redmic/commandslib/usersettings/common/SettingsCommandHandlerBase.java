@@ -283,8 +283,6 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		Thread.sleep(1000);
 
 		PartialDeselectEvent partialDeselectEvent = SettingsDataUtil.getPartialDeselectEvent(code + "7");
-		partialDeselectEvent.getSelection().getSelection().clear();
-		partialDeselectEvent.getSelection().getSelection().add("2");
 		kafkaTemplate.send(settings_topic, partialDeselectEvent.getAggregateId(), partialDeselectEvent);
 
 		Event select = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
@@ -697,7 +695,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		// Añade completableFeature para que se resuelva al recibir el mensaje.
 		CompletableFuture<SettingsDTO> completableFuture = Whitebox.invokeMethod(settingsCommandHandler,
-				"getCompletableFeature", event.getSessionId(), settingsSavedEvent.getSettings());
+				"getCompletableFeature", event.getSessionId());
 
 		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
 
