@@ -24,18 +24,23 @@ import org.mapstruct.factory.Mappers;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.aggregate.Aggregate;
+import es.redmic.commandslib.exceptions.ItemLockedException;
+import es.redmic.commandslib.usersettings.commands.CloneSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
+import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
+import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.common.PersistenceEvent;
 import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
 import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.mapper.SettingsMapper;
 
 public class PersistenceAggregate extends Aggregate {
@@ -104,6 +109,44 @@ public class PersistenceAggregate extends Aggregate {
 		return evt;
 	}
 
+	public CloneSettingsEvent process(CloneSettingsCommand cmd) {
+
+		assert settingsStateStore != null;
+
+		String id = cmd.getPersistence().getId();
+
+		if (exist(id)) {
+			logger.error("Descartando clonado con nuevo " + id + ". Ya está registrado.");
+			return null;
+		}
+
+		this.setAggregateId(id);
+
+		CloneSettingsEvent evt = new CloneSettingsEvent(cmd.getPersistence());
+		evt.setAggregateId(id);
+		evt.setVersion(1);
+		return evt;
+	}
+
+	public UpdateSettingsAccessedDateEvent process(UpdateSettingsAccessedDateCommand cmd) {
+
+		assert settingsStateStore != null;
+
+		String id = cmd.getSettingsId();
+
+		Event state = getStateFromHistory(id);
+
+		loadFromHistory(state);
+
+		checkState(id, state.getType());
+
+		UpdateSettingsAccessedDateEvent evt = new UpdateSettingsAccessedDateEvent();
+		evt.setAggregateId(id);
+		evt.setVersion(getVersion() + 1);
+		evt.setUserId(state.getUserId());
+		return evt;
+	}
+
 	public SettingsDTO getSettings() {
 		return settings;
 	}
@@ -144,7 +187,9 @@ public class PersistenceAggregate extends Aggregate {
 			apply((SettingsCancelledEvent) event);
 			break;
 		default:
+			// TODO: añadir exepción
 			logger.debug("Evento no manejado ", event.getType());
+			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}
 

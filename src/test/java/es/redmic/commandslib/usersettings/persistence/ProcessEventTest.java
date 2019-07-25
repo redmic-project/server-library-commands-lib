@@ -21,6 +21,7 @@ package es.redmic.commandslib.usersettings.persistence;
  */
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,15 +37,19 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
+import es.redmic.commandslib.usersettings.commands.CloneSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
+import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.exception.data.ItemNotFoundException;
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
+import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -141,6 +146,50 @@ public class ProcessEventTest {
 		assertEquals(evt.getAggregateId(), persistence.getId());
 		assertEquals(evt.getType(), SettingsEventTypes.CHECK_DELETE);
 		assertTrue(evt.getVersion().equals(2));
+	}
+
+	@Test
+	public void processCloneSettingsCommand_ReturnCloneSettingsEvent_IfProcessIsOk() {
+
+		PersistenceDTO persistence = SettingsDataUtil.getPersistenceDTO(code);
+
+		String serviceName = "/atlas/commands/layer/settings";
+		CloneSettingsCommand command = new CloneSettingsCommand(persistence.getId(), serviceName);
+
+		CloneSettingsEvent evt = agg.process(command);
+
+		assertNotNull(evt);
+		assertNotNull(evt.getDate());
+		assertNotNull(evt.getId());
+		assertNotNull(evt.getAggregateId());
+		assertNotEquals(evt.getAggregateId(), persistence.getId());
+		assertEquals(evt.getType(), SettingsEventTypes.CLONE);
+		assertTrue(evt.getVersion().equals(1));
+		assertEquals(evt.getAggregateId(), evt.getPersistence().getId());
+		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getUpdated());
+		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getAccessed());
+		assertEquals(serviceName, evt.getPersistence().getService());
+	}
+
+	@Test
+	public void processUpdateSettingsAccessedDateCommand_ReturnUpdateSettingsAccessedDateEvent_IfProcessIsOk() {
+
+		when(settingsStateStore.get(any())).thenReturn(SettingsDataUtil.getSettingsSavedEvent(code));
+
+		PersistenceDTO persistence = SettingsDataUtil.getPersistenceDTO(code);
+
+		UpdateSettingsAccessedDateCommand command = new UpdateSettingsAccessedDateCommand(persistence.getId());
+
+		UpdateSettingsAccessedDateEvent evt = agg.process(command);
+
+		assertNotNull(evt);
+		assertNotNull(evt.getDate());
+		assertNotNull(evt.getId());
+		assertNotNull(evt.getAggregateId());
+		assertEquals(evt.getAggregateId(), persistence.getId());
+		assertEquals(evt.getType(), SettingsEventTypes.UPDATE_ACCESSED_DATE);
+		assertTrue(evt.getVersion().equals(2));
+		assertEquals(evt.getAggregateId(), persistence.getId());
 	}
 
 	// Borrar un elemento ya borrado
