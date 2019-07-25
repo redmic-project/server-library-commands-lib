@@ -131,6 +131,13 @@ public class SettingsController {
 		return new BodyItemDTO<SettingsDTO>(service.clear(id, dto));
 	}
 
+	@PutMapping(value = "/clone/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseBody
+	public SuperDTO clone(@PathVariable("id") String id) {
+
+		return new BodyItemDTO<SettingsDTO>(service.clone(id, serviceName));
+	}
+
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseBody
 	public SuperDTO save(@Valid @RequestBody PersistenceDTO dto, BindingResult errorDto, HttpServletRequest request) {

@@ -24,6 +24,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import es.redmic.commandslib.usersettings.commands.ClearCommand;
+import es.redmic.commandslib.usersettings.commands.CloneSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
@@ -61,6 +62,10 @@ public class SettingsService {
 	public SettingsDTO clear(String id, SelectionDTO selection) {
 		selection.setId(id);
 		return commandHandler.clear(new ClearCommand(selection));
+	}
+
+	public SettingsDTO clone(String id, String serviceName) {
+		return commandHandler.clone(new CloneSettingsCommand(id, serviceName));
 	}
 
 	public SettingsDTO create(PersistenceDTO persistence) {
