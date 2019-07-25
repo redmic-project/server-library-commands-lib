@@ -38,10 +38,12 @@ import es.redmic.commandslib.streaming.common.StreamConfig.Builder;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
 import es.redmic.commandslib.usersettings.aggregate.SelectionAggregate;
 import es.redmic.commandslib.usersettings.commands.ClearCommand;
+import es.redmic.commandslib.usersettings.commands.CloneSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
 import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.SelectCommand;
+import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.commandslib.usersettings.streams.SettingsEventStreams;
@@ -53,6 +55,7 @@ import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionCancelledEvent;
 import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
 import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
+import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCancelledEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCheckedEvent;
@@ -67,6 +70,7 @@ import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
 import es.redmic.usersettingslib.events.select.PartialSelectEvent;
 import es.redmic.usersettingslib.events.select.SelectCancelledEvent;
 import es.redmic.usersettingslib.events.select.SelectedEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 
 @Component
 @ConditionalOnProperty(name = "redmic.user-settings.enabled", havingValue = "true")
@@ -327,6 +331,56 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		// Obtiene el resultado cuando se resuelva la espera
 		return getResult(event.getSessionId(), completableFuture);
+	}
+
+	public SettingsDTO clone(CloneSettingsCommand cmd) {
+
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
+
+		// Se procesa el comando, obteniendo el evento generado
+		logger.debug("Procesando CloneSettingsCommand");
+
+		CloneSettingsEvent event = agg.process(cmd);
+
+		// Si no se genera evento significa que no se debe aplicar
+		if (event == null)
+			return null;
+
+		String userId = userService.getUserId();
+		event.setUserId(userId);
+		event.getPersistence().setUserId(userId);
+
+		// Se aplica el evento
+		agg.apply(event);
+
+		logger.debug("Aplicado evento: " + event.getType());
+
+		// Crea la espera hasta que se responda con evento completado
+		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
+
+		// Emite evento para enviar a kafka
+		publishToKafka(event, settingsTopic);
+
+		updateSettingsAccessedDate(new UpdateSettingsAccessedDateCommand(cmd.getPersistence().getSettingsId()));
+
+		// Obtiene el resultado cuando se resuelva la espera
+		return getResult(event.getSessionId(), completableFuture);
+	}
+
+	public void updateSettingsAccessedDate(UpdateSettingsAccessedDateCommand cmd) {
+
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
+
+		// Se procesa el comando, obteniendo el evento generado
+		logger.debug("Procesando UpdateSettingsAccessedDateCommand");
+
+		UpdateSettingsAccessedDateEvent event = agg.process(cmd);
+
+		// Si no se genera evento significa que no se debe aplicar
+		if (event == null)
+			logger.error("Imposible actualizar fecha de accedido para el item " + cmd.getSettingsId());
+
+		publishToKafka(event, settingsTopic);
 	}
 
 	// Select

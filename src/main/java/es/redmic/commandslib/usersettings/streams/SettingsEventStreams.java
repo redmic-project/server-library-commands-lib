@@ -28,6 +28,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
+import org.joda.time.DateTime;
 import org.mapstruct.factory.Mappers;
 
 import es.redmic.brokerlib.alert.AlertService;
@@ -43,10 +44,12 @@ import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventFactory;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
+import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.common.SelectionEvent;
 import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.mapper.SettingsMapper;
 
 public class SettingsEventStreams extends BaseStreams {
@@ -103,6 +106,10 @@ public class SettingsEventStreams extends BaseStreams {
 		processCheckDeleteSettings(events, snapshotKTable);
 
 		processDeleteFailedStream(events, snapshotKTable);
+
+		processCloneSettings(events, snapshotKTable);
+
+		processUpdateSettingsAccessedDate(events, snapshotKTable);
 
 		return new KafkaStreams(builder.build(),
 				StreamUtils.baseStreamsConfig(bootstrapServers, stateStoreDir, serviceId, schemaRegistry));
@@ -517,6 +524,72 @@ public class SettingsEventStreams extends BaseStreams {
 		SettingsDTO settings = ((SettingsEvent) requestEvent).getSettings();
 
 		return SettingsEventFactory.getEvent(confirmedEvent, SettingsEventTypes.SAVED, settings);
+	}
+
+	// Clone
+
+	private void processCloneSettings(KStream<String, Event> events, KTable<String, Event> snapshotKTable) {
+
+		KStream<String, Event> cloneEvents = events
+				.filter((id, event) -> (SettingsEventTypes.CLONE.equals(event.getType())))
+				.selectKey((k, v) -> ((CloneSettingsEvent) v).getPersistence().getSettingsId());
+
+		// Envía evento para guardar nuevas settings de trabajo
+		cloneEvents.leftJoin(snapshotKTable,
+				(cloneEvent, snapshotEvent) -> getSaveSettingsByCloneEvent((CloneSettingsEvent) cloneEvent,
+						(SettingsEvent) snapshotEvent))
+				.selectKey((k, v) -> v.getAggregateId()).to(topic);
+	}
+
+	private Event getSaveSettingsByCloneEvent(CloneSettingsEvent cloneEvent, SettingsEvent snapshotEvent) {
+
+		if (snapshotEvent == null) {
+			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
+			return SettingsEventFactory.getEvent(cloneEvent, SettingsEventTypes.SAVE_FAILED,
+					ExceptionType.ES_SELECTION_WORK.toString(), null);
+		}
+
+		SettingsDTO sourceSettings = snapshotEvent.getSettings();
+		PersistenceDTO persistenceInfo = cloneEvent.getPersistence();
+
+		sourceSettings.setId(persistenceInfo.getId());
+		sourceSettings.setName(null);
+		sourceSettings.setShared(false);
+		sourceSettings.setUserId(cloneEvent.getUserId());
+
+		return SettingsEventFactory.getEvent(cloneEvent, SettingsEventTypes.SAVE, sourceSettings);
+	}
+
+	// UpdateSettingsAccessedDate
+
+	private void processUpdateSettingsAccessedDate(KStream<String, Event> events,
+			KTable<String, Event> snapshotKTable) {
+
+		KStream<String, Event> updateAccessedDateEvents = events
+				.filter((id, event) -> (SettingsEventTypes.UPDATE_ACCESSED_DATE.equals(event.getType())));
+
+		// Envía evento para actualizar la fecha de acceso de las settings copiada
+		updateAccessedDateEvents.leftJoin(snapshotKTable,
+				(updateAccessedDateEvent, snapshotEvent) -> getUpdateSettingsAccessedDateEvent(
+						(UpdateSettingsAccessedDateEvent) updateAccessedDateEvent, (SettingsEvent) snapshotEvent))
+				.to(topic);
+
+	}
+
+	private Event getUpdateSettingsAccessedDateEvent(UpdateSettingsAccessedDateEvent updateAccessedDateEvent,
+			SettingsEvent snapshotEvent) {
+
+		if (snapshotEvent == null) {
+			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
+			return SettingsEventFactory.getEvent(updateAccessedDateEvent, SettingsEventTypes.SAVE_FAILED,
+					ExceptionType.ES_SELECTION_WORK.toString(), null);
+		}
+
+		SettingsDTO sourceSettings = snapshotEvent.getSettings();
+
+		sourceSettings.setAccessed(DateTime.now());
+
+		return SettingsEventFactory.getEvent(updateAccessedDateEvent, SettingsEventTypes.SAVE, sourceSettings);
 	}
 
 	// Delete
