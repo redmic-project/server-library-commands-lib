@@ -2,6 +2,7 @@ package es.redmic.commandslib.usersettings.common;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -59,6 +60,7 @@ import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionFailedEvent;
 import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
 import es.redmic.usersettingslib.events.clearselection.SelectionClearedEvent;
+import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.common.SettingsCancelledEvent;
 import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
@@ -86,6 +88,7 @@ import es.redmic.usersettingslib.events.select.SelectConfirmedEvent;
 import es.redmic.usersettingslib.events.select.SelectEvent;
 import es.redmic.usersettingslib.events.select.SelectFailedEvent;
 import es.redmic.usersettingslib.events.select.SelectedEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
@@ -173,7 +176,9 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		List<String> selection = selectedEvent.getSettings().getSelection();
 		selection.addAll(selectionExpected.getSelection());
 
-		assertEquals(selection, settings.getSelection());
+		assertEquals(selection.size(), settings.getSelection().size());
+		selection.removeAll(settings.getSelection());
+		assertEquals(0, selection.size());
 		assertFalse(settings.getShared());
 		assertNull(settings.getName());
 	}
@@ -708,6 +713,81 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertEquals(SettingsEventTypes.DELETE_CANCELLED, cancelled.getType());
 		assertEquals(mapper.writeValueAsString(settingsSavedEvent.getSettings()),
 				mapper.writeValueAsString(((DeleteSettingsCancelledEvent) cancelled).getSettings()));
+	}
+
+	// Clone
+
+	// Envía un evento de clonado para una selección existente y debe provocar un
+	// evento save con settings dentro
+	@Test
+	public void cloneSettingsEvent_SendSaveEvent_IfReceivesSuccess() throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "25");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		CloneSettingsEvent cloneEvent = SettingsDataUtil.getCloneSettingsEvent(code + "26");
+
+		cloneEvent.getPersistence().setSettingsId(selectedEvent.getAggregateId());
+
+		kafkaTemplate.send(settings_topic, cloneEvent.getAggregateId(), cloneEvent);
+
+		Event save = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(save);
+		assertEquals(SettingsEventTypes.SAVE, save.getType());
+
+		PersistenceDTO persistenceInfoExpected = cloneEvent.getPersistence();
+		SettingsDTO settings = ((SettingsEvent) save).getSettings();
+
+		assertEquals(persistenceInfoExpected.getService(), settings.getService());
+		assertNotNull(settings.getService());
+
+		assertEquals(selectedEvent.getSettings().getSelection(), settings.getSelection());
+		assertEquals(false, settings.getShared());
+		assertEquals(null, settings.getName());
+	}
+
+	// Envía un evento de actualizado de fecha de acceso para una selección
+	// existente y debe provocar un
+	// evento save con settings originales dentro y fecha de acceso actualizada
+	@Test
+	public void updateSettingsAccessedDateEvent_SendSaveEvent_IfReceivesSuccess() throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "27");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		UpdateSettingsAccessedDateEvent updateSettingsAccessedDateEvent = SettingsDataUtil
+				.getUpdateSettingsAccessedDateEvent(code + "27");
+
+		kafkaTemplate.send(settings_topic, updateSettingsAccessedDateEvent.getAggregateId(),
+				updateSettingsAccessedDateEvent);
+
+		Event save = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(save);
+		assertEquals(SettingsEventTypes.SAVE, save.getType());
+
+		assertEquals(selectedEvent.getUserId(), save.getUserId());
+		assertEquals((Integer) (selectedEvent.getVersion() + 1), save.getVersion());
+
+		SettingsDTO settingsForUpdate = ((SettingsEvent) save).getSettings(),
+				sourceSettings = selectedEvent.getSettings();
+
+		assertEquals(sourceSettings.getService(), settingsForUpdate.getService());
+		assertEquals(selectedEvent.getSettings().getSelection(), settingsForUpdate.getSelection());
+		assertEquals(sourceSettings.getShared(), settingsForUpdate.getShared());
+		assertEquals(sourceSettings.getName(), settingsForUpdate.getName());
+		assertNotEquals(sourceSettings.getAccessed(), settingsForUpdate.getAccessed());
 	}
 
 	// Select
