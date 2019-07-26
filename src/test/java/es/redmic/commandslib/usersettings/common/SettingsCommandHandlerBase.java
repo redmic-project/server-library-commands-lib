@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.usersettings.handler.SettingsCommandHandler;
+import es.redmic.exception.common.ExceptionType;
 import es.redmic.exception.data.DeleteItemException;
 
 /*-
@@ -204,6 +205,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.SELECT_FAILED, select.getType());
+		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
+				((SettingsCancelledEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de selección y debe provocar un evento
@@ -330,6 +333,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.DESELECT_FAILED, select.getType());
+		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
+				((SettingsCancelledEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de selección y debe provocar un evento
@@ -449,6 +454,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.CLEAR_SELECTION_FAILED, select.getType());
+		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
+				((SettingsCancelledEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de limpiar selección y debe provocar un

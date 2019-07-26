@@ -153,7 +153,7 @@ public class SettingsEventStreams extends BaseStreams {
 			if (!changeSelectionIsGranted(settings, newSelection)) {
 
 				return SettingsEventFactory.getEvent(partialSelectEvent, SettingsEventTypes.SELECT_FAILED,
-						ExceptionType.ES_SELECTION_WORK.toString(), null);
+						ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(), null);
 			}
 
 			Set<String> set = new LinkedHashSet<>();
@@ -259,7 +259,7 @@ public class SettingsEventStreams extends BaseStreams {
 		if (!changeSelectionIsGranted(settings, newSelection)) {
 
 			return SettingsEventFactory.getEvent(partialDeselectEvent, SettingsEventTypes.DESELECT_FAILED,
-					ExceptionType.ES_SELECTION_WORK.toString(), null);
+					ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(), null);
 		}
 
 		settings.getSelection().removeAll(newSelection.getSelection());
@@ -355,9 +355,8 @@ public class SettingsEventStreams extends BaseStreams {
 		SettingsDTO settings = ((SettingsEvent) snapshotEvent).getSettings();
 
 		if (!changeSelectionIsGranted(settings, newSelection)) {
-			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(partialClearEvent, SettingsEventTypes.CLEAR_SELECTION_FAILED,
-					ExceptionType.ES_SELECTION_WORK.toString(), null);
+					ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(), null);
 		}
 
 		settings.getSelection().clear();
@@ -653,8 +652,8 @@ public class SettingsEventStreams extends BaseStreams {
 				&& settings.getUserId().equals(newSelection.getUserId()) && !settings.getShared()
 				&& (settings.getName() == null))) {
 
-			logger.error(
-					"Imposible modificar la selección de trabajo. No cumple alguna de las restricciones establecidas.");
+			logger.error("Imposible modificar la selección de trabajo " + newSelection.getId()
+					+ ". No cumple alguna de las restricciones establecidas.");
 
 			return false;
 		}
