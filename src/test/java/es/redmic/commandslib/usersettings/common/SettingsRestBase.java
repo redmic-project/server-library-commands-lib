@@ -456,6 +456,24 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	}
 
 	@Test
+	public void deleteRequest_ReturnUnauthorized_IfUserIsNotLoggedIn() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(MockMvcRequestBuilders.delete(SETTINGS_PATH + "/" + id)
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isUnauthorized());
+		
+		// @formatter:on
+	}
+
+	@Test
 	public void cloneRequest_ReturnSavedItem_IfWasSuccess() throws Exception {
 
 		String otherUserId = "15";
