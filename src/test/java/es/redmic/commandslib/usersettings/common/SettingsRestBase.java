@@ -1,7 +1,9 @@
 package es.redmic.commandslib.usersettings.common;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
@@ -30,7 +32,6 @@ import org.springframework.http.MediaType;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -44,6 +45,7 @@ import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionConfirmedEvent;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
+import es.redmic.usersettingslib.events.common.SettingsEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsConfirmedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectConfirmedEvent;
@@ -54,6 +56,7 @@ import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
 import es.redmic.usersettingslib.events.select.SelectConfirmedEvent;
 import es.redmic.usersettingslib.events.select.SelectEvent;
 import es.redmic.usersettingslib.events.select.SelectedEvent;
+import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
 /*-
@@ -181,7 +184,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
 		evt.getSettings().setName(null);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -195,7 +198,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		
 		String id = SettingsDataUtil.PREFIX + CODE;
 		
-		MvcResult result = this.mockMvc
+		this.mockMvc
 				.perform(put(SETTINGS_PATH + "/select/" + id)
 						.header("Authorization", "Bearer " + getTokenOAGUser())
 						.content(mapper.writeValueAsString(selectionDTO))
@@ -209,9 +212,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.body.userId", is(userId)))
 				.andExpect(jsonPath("$.body.selection", notNullValue()))
 				.andExpect(jsonPath("$.body.selection", hasSize(1)))
-				.andExpect(jsonPath("$.body.selection", hasItem("1"))).andReturn();
-		
-		System.out.println("select " + result.getResponse().getContentAsString());
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
 		
 		// @formatter:on
 
@@ -232,7 +233,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
 		evt.getSettings().setName(null);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -280,7 +281,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
 		evt.getSettings().setName(null);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -327,7 +328,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(UUID.randomUUID().toString());
 		evt.getSettings().setName(null);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -370,7 +371,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		SelectedEvent selectedEvt = SettingsDataUtil.getSelectedEvent(UUID.randomUUID().toString());
 		selectedEvt.getSettings().setName(null);
 		selectedEvt.getSettings().setService(serviceName);
-		selectedEvt.getSettings().setUserId("13");
+		selectedEvt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, selectedEvt.getAggregateId(), selectedEvt);
 
@@ -378,7 +379,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -405,7 +406,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.body.userId", is(userId)))
 				.andExpect(jsonPath("$.body.selection", notNullValue()))
 				.andExpect(jsonPath("$.body.selection", hasSize(1)))
-				.andExpect(jsonPath("$.body.selection", hasItem("1"))).andReturn();
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
 		
 		// @formatter:on
 
@@ -426,7 +427,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
 		evt.getSettings().setService(serviceName);
-		evt.getSettings().setUserId("13");
+		evt.getSettings().setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
 
@@ -452,6 +453,97 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertNotNull(event);
 		assertEquals(expectedEvent.getType(), event.getType());
 		assertEquals(expectedEvent.getVersion(), event.getVersion());
+	}
+
+	@Test
+	public void cloneRequest_ReturnSavedItem_IfWasSuccess() throws Exception {
+
+		String otherUserId = "15";
+
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		settingsSavedEvent.getSettings().setName(null);
+		settingsSavedEvent.getSettings().setService(serviceName);
+		settingsSavedEvent.getSettings().setUserId(otherUserId);
+		settingsSavedEvent.setUserId(otherUserId);
+
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+
+		when(settingsStateStore.get(settingsSavedEvent.getAggregateId())).thenReturn(settingsSavedEvent);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO();
+		persistenceDTO.setUserId(null);
+		persistenceDTO.setSettingsId(settingsSavedEvent.getAggregateId());
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/clone/" + id)
+						.header("Authorization", "Bearer " + getTokenOAGUser())
+						.content(mapper.writeValueAsString(persistenceDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success", is(true)))
+				.andExpect(jsonPath("$.body", notNullValue()))
+				.andExpect(jsonPath("$.body.id", is(not(equalTo(id)))))
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
+		
+		// @formatter:on
+
+		SaveSettingsEvent expectedEvent = SettingsDataUtil.getSaveSettingsEvent(CODE);
+
+		Event firstEvent = (Event) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		checkCloneEvents(firstEvent, settingsSavedEvent, expectedEvent);
+
+		Event secondEvent = (Event) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		checkCloneEvents(secondEvent, settingsSavedEvent, expectedEvent);
+
+		Event thirdEvent = (Event) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		checkCloneEvents(thirdEvent, settingsSavedEvent, expectedEvent);
+
+	}
+
+	private void checkCloneEvents(Event event, SettingsSavedEvent settingsSavedEvent, SaveSettingsEvent expectedEvent) {
+
+		assertNotNull(event);
+
+		if ((event instanceof SaveSettingsEvent)
+				&& (!event.getAggregateId().equals(settingsSavedEvent.getAggregateId()))) {
+
+			logger.info("Comprobando evento SaveSettingsEvent por guardado del clonado");
+
+			assertEquals(expectedEvent.getType(), event.getType());
+			assertEquals(expectedEvent.getVersion(), event.getVersion());
+			assertEquals(serviceName, ((SettingsEvent) event).getSettings().getService());
+			assertEquals(userId, ((SettingsEvent) event).getSettings().getUserId());
+
+		} else if ((event instanceof SaveSettingsEvent)
+				&& (event.getAggregateId().equals(settingsSavedEvent.getAggregateId()))) {
+
+			logger.info("Comprobando evento SaveSettingsEvent por actualización de fecha de acceso");
+			assertEquals(expectedEvent.getType(), event.getType());
+			assertEquals((Integer) 2, event.getVersion());
+			assertEquals(serviceName, ((SettingsEvent) event).getSettings().getService());
+			assertEquals(settingsSavedEvent.getUserId(), ((SettingsEvent) event).getSettings().getUserId());
+
+		} else if (event instanceof UpdateSettingsAccessedDateEvent) {
+
+			logger.info("Comprobando evento UpdateSettingsAccessedDateEvent por acceso a settings");
+
+			assertEquals(settingsSavedEvent.getAggregateId(), event.getAggregateId());
+			assertEquals(settingsSavedEvent.getUserId(), event.getUserId());
+		}
 	}
 
 	@KafkaHandler
@@ -515,6 +607,12 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		future.addCallback(new SendListener());
 
 		blockingQueue.offer(deleteSettingsEvent);
+	}
+
+	@KafkaHandler
+	private void listen(UpdateSettingsAccessedDateEvent updateSettingsAccessedDateEvent) {
+
+		blockingQueue.offer(updateSettingsAccessedDateEvent);
 	}
 
 	@KafkaHandler(isDefault = true)

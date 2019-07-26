@@ -570,14 +570,14 @@ public class SettingsEventStreams extends BaseStreams {
 
 		// Envía evento para actualizar la fecha de acceso de las settings copiada
 		updateAccessedDateEvents.leftJoin(snapshotKTable,
-				(updateAccessedDateEvent, snapshotEvent) -> getUpdateSettingsAccessedDateEvent(
+				(updateAccessedDateEvent, snapshotEvent) -> getSaveSettingsByUpdateSettingsAccessedDateEvent(
 						(UpdateSettingsAccessedDateEvent) updateAccessedDateEvent, (SettingsEvent) snapshotEvent))
 				.to(topic);
 
 	}
 
-	private Event getUpdateSettingsAccessedDateEvent(UpdateSettingsAccessedDateEvent updateAccessedDateEvent,
-			SettingsEvent snapshotEvent) {
+	private Event getSaveSettingsByUpdateSettingsAccessedDateEvent(
+			UpdateSettingsAccessedDateEvent updateAccessedDateEvent, SettingsEvent snapshotEvent) {
 
 		if (snapshotEvent == null) {
 			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
