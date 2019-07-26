@@ -446,7 +446,7 @@ public class SettingsEventStreams extends BaseStreams {
 		if (snapshotEvent == null) {
 			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(partialEvent, SettingsEventTypes.SAVE_FAILED,
-					ExceptionType.ES_SELECTION_WORK.toString(), null);
+					ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
 
 		SettingsDTO sourceSettings = snapshotEvent.getSettings();
@@ -545,7 +545,7 @@ public class SettingsEventStreams extends BaseStreams {
 		if (snapshotEvent == null) {
 			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(cloneEvent, SettingsEventTypes.SAVE_FAILED,
-					ExceptionType.ES_SELECTION_WORK.toString(), null);
+					ExceptionType.SETTINGS_TO_CLONE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
 
 		SettingsDTO sourceSettings = snapshotEvent.getSettings();
@@ -581,7 +581,7 @@ public class SettingsEventStreams extends BaseStreams {
 		if (snapshotEvent == null) {
 			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(updateAccessedDateEvent, SettingsEventTypes.SAVE_FAILED,
-					ExceptionType.ES_SELECTION_WORK.toString(), null);
+					ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
 
 		SettingsDTO sourceSettings = snapshotEvent.getSettings();

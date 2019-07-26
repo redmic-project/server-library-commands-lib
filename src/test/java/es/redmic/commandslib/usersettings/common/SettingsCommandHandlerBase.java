@@ -206,7 +206,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.SELECT_FAILED, select.getType());
 		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
-				((SettingsCancelledEvent) select).getExceptionType());
+				((SelectFailedEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de selección y debe provocar un evento
@@ -334,7 +334,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.DESELECT_FAILED, select.getType());
 		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
-				((SettingsCancelledEvent) select).getExceptionType());
+				((DeselectFailedEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de selección y debe provocar un evento
@@ -455,7 +455,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(select);
 		assertEquals(SettingsEventTypes.CLEAR_SELECTION_FAILED, select.getType());
 		assertEquals(ExceptionType.SELECTION_CHANGE_NOT_ALLOWED.toString(),
-				((SettingsCancelledEvent) select).getExceptionType());
+				((ClearSelectionFailedEvent) select).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de limpiar selección y debe provocar un
@@ -565,6 +565,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		assertNotNull(failed);
 		assertEquals(SettingsEventTypes.SAVE_FAILED, failed.getType());
+		assertEquals(ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(),
+				((SaveSettingsFailedEvent) failed).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de limpiar guardado y debe provocar un
@@ -757,6 +759,23 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertEquals(selectedEvent.getSettings().getSelection(), settings.getSelection());
 		assertEquals(false, settings.getShared());
 		assertEquals(null, settings.getName());
+	}
+
+	// Envía un evento para clonar una selección existente y debe provocar un
+	// evento SaveSettingsFailed por no existir la selección de trabajo a guardar
+	@Test
+	public void cloneSettingsEvent_SendSaveSettingsFailedEvent_IfSettingsToCloneNotExists() throws Exception {
+
+		CloneSettingsEvent cloneSettingsEvent = SettingsDataUtil.getCloneSettingsEvent(code + "26b");
+		cloneSettingsEvent.getPersistence().setSettingsId("notExists");
+		kafkaTemplate.send(settings_topic, cloneSettingsEvent.getAggregateId(), cloneSettingsEvent);
+
+		Event failed = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(failed);
+		assertEquals(SettingsEventTypes.SAVE_FAILED, failed.getType());
+		assertEquals(ExceptionType.SETTINGS_TO_CLONE_NOT_FOUND_EXCEPTION.toString(),
+				((SaveSettingsFailedEvent) failed).getExceptionType());
 	}
 
 	// Envía un evento de actualizado de fecha de acceso para una selección
