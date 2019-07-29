@@ -31,6 +31,7 @@ import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
@@ -49,33 +50,46 @@ public class PersistenceAggregate extends Aggregate {
 
 	private SettingsStateStore settingsStateStore;
 
-	public PersistenceAggregate(SettingsStateStore settingsStateStore) {
+	private UserService userService;
+
+	public PersistenceAggregate(SettingsStateStore settingsStateStore, UserService userService) {
 		this.settingsStateStore = settingsStateStore;
+		this.userService = userService;
 	}
 
 	public PartialSaveSettingsEvent process(SaveSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
 
+		String userId = userService.getUserId();
+
 		String id = cmd.getPersistence().getId();
+
+		String historicalEventUserId = null;
 
 		if (exist(id)) {
 			Event state = getStateFromHistory(id);
 			loadFromHistory(state);
 			checkState(id, state.getType());
+			historicalEventUserId = state.getUserId();
 		}
 
 		this.setAggregateId(id);
 
+		authorshipCheck(userId, historicalEventUserId);
+
 		PartialSaveSettingsEvent evt = new PartialSaveSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
 		evt.setVersion(1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
 	public PartialSaveSettingsEvent process(UpdateSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
+
+		String userId = userService.getUserId();
 
 		String id = cmd.getPersistence().getId();
 
@@ -85,15 +99,20 @@ public class PersistenceAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
+		authorshipCheck(userId, state.getUserId());
+
 		PartialSaveSettingsEvent evt = new PartialSaveSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
 	public CheckDeleteSettingsEvent process(DeleteSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
+
+		String userId = userService.getUserId();
 
 		String id = cmd.getSettingsId();
 
@@ -103,15 +122,20 @@ public class PersistenceAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
+		authorshipCheck(userId, state.getUserId());
+
 		CheckDeleteSettingsEvent evt = new CheckDeleteSettingsEvent();
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
 	public CloneSettingsEvent process(CloneSettingsCommand cmd) {
 
 		assert settingsStateStore != null;
+
+		String userId = userService.getUserId();
 
 		String id = cmd.getPersistence().getId();
 
@@ -125,12 +149,15 @@ public class PersistenceAggregate extends Aggregate {
 		CloneSettingsEvent evt = new CloneSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
 		evt.setVersion(1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
 	public UpdateSettingsAccessedDateEvent process(UpdateSettingsAccessedDateCommand cmd) {
 
 		assert settingsStateStore != null;
+
+		String userId = userService.getUserId();
 
 		String id = cmd.getSettingsId();
 
@@ -143,7 +170,7 @@ public class PersistenceAggregate extends Aggregate {
 		UpdateSettingsAccessedDateEvent evt = new UpdateSettingsAccessedDateEvent();
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
-		evt.setUserId(state.getUserId());
+		evt.setUserId(userId);
 		return evt;
 	}
 
@@ -187,8 +214,6 @@ public class PersistenceAggregate extends Aggregate {
 			apply((SettingsCancelledEvent) event);
 			break;
 		default:
-			// TODO: añadir exepción
-			logger.debug("Evento no manejado ", event.getType());
 			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}

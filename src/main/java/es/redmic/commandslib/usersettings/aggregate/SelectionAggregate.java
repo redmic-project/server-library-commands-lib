@@ -24,10 +24,12 @@ import org.mapstruct.factory.Mappers;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.aggregate.Aggregate;
+import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.commands.ClearCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
 import es.redmic.commandslib.usersettings.commands.SelectCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
@@ -44,27 +46,39 @@ public class SelectionAggregate extends Aggregate {
 
 	private SettingsStateStore settingsStateStore;
 
-	public SelectionAggregate(SettingsStateStore settingsStateStore) {
+	private UserService userService;
+
+	public SelectionAggregate(SettingsStateStore settingsStateStore, UserService userService) {
 		this.settingsStateStore = settingsStateStore;
+		this.userService = userService;
 	}
 
 	public PartialSelectEvent process(SelectCommand cmd) {
 
 		assert settingsStateStore != null;
 
+		String userId = userService.getUserId();
+
 		String id = cmd.getSelection().getId();
+
+		String historicalEventUserId = null;
 
 		if (exist(id)) {
 			Event state = getStateFromHistory(id);
 			loadFromHistory(state);
 			checkState(id, state.getType());
+			historicalEventUserId = state.getUserId();
 		}
+
+		authorshipCheck(userId, historicalEventUserId);
 
 		this.setAggregateId(id);
 
 		PartialSelectEvent evt = new PartialSelectEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(1);
+		evt.setUserId(userId);
+
 		return evt;
 	}
 
@@ -72,6 +86,8 @@ public class SelectionAggregate extends Aggregate {
 
 		assert settingsStateStore != null;
 
+		String userId = userService.getUserId();
+
 		String id = cmd.getSelection().getId();
 
 		Event state = getStateFromHistory(id);
@@ -80,9 +96,12 @@ public class SelectionAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
+		authorshipCheck(userId, state.getUserId());
+
 		PartialDeselectEvent evt = new PartialDeselectEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
@@ -90,6 +109,8 @@ public class SelectionAggregate extends Aggregate {
 
 		assert settingsStateStore != null;
 
+		String userId = userService.getUserId();
+
 		String id = cmd.getSelection().getId();
 
 		Event state = getStateFromHistory(id);
@@ -98,9 +119,12 @@ public class SelectionAggregate extends Aggregate {
 
 		checkState(id, state.getType());
 
+		authorshipCheck(userId, state.getUserId());
+
 		PartialClearSelectionEvent evt = new PartialClearSelectionEvent(cmd.getSelection());
 		evt.setAggregateId(id);
 		evt.setVersion(getVersion() + 1);
+		evt.setUserId(userId);
 		return evt;
 	}
 
@@ -144,7 +168,7 @@ public class SelectionAggregate extends Aggregate {
 			apply((SettingsCancelledEvent) event);
 			break;
 		default:
-			logger.debug("Evento no manejado ", event.getType());
+			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}
 

@@ -444,7 +444,6 @@ public class SettingsEventStreams extends BaseStreams {
 	private Event getSaveSettingsEvent(PartialSaveSettingsEvent partialEvent, SettingsEvent snapshotEvent) {
 
 		if (snapshotEvent == null) {
-			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(partialEvent, SettingsEventTypes.SAVE_FAILED,
 					ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
@@ -543,7 +542,6 @@ public class SettingsEventStreams extends BaseStreams {
 	private Event getSaveSettingsByCloneEvent(CloneSettingsEvent cloneEvent, SettingsEvent snapshotEvent) {
 
 		if (snapshotEvent == null) {
-			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(cloneEvent, SettingsEventTypes.SAVE_FAILED,
 					ExceptionType.SETTINGS_TO_CLONE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
@@ -579,10 +577,12 @@ public class SettingsEventStreams extends BaseStreams {
 			UpdateSettingsAccessedDateEvent updateAccessedDateEvent, SettingsEvent snapshotEvent) {
 
 		if (snapshotEvent == null) {
-			// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 			return SettingsEventFactory.getEvent(updateAccessedDateEvent, SettingsEventTypes.SAVE_FAILED,
 					ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(), null);
 		}
+
+		// Cambia la autoría para que permita el guardado
+		updateAccessedDateEvent.setUserId(snapshotEvent.getUserId());
 
 		SettingsDTO sourceSettings = snapshotEvent.getSettings();
 

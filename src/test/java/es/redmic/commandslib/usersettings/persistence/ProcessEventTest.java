@@ -44,6 +44,7 @@ import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCom
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.exception.data.ItemNotFoundException;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
@@ -59,6 +60,8 @@ public class ProcessEventTest {
 
 	SettingsStateStore settingsStateStore;
 
+	UserService userService;
+
 	PersistenceAggregate agg;
 
 	@Before
@@ -66,7 +69,11 @@ public class ProcessEventTest {
 
 		settingsStateStore = Mockito.mock(SettingsStateStore.class);
 
-		agg = new PersistenceAggregate(settingsStateStore);
+		userService = Mockito.mock(UserService.class);
+
+		agg = new PersistenceAggregate(settingsStateStore, userService);
+
+		when(userService.getUserId()).thenReturn("13");
 	}
 
 	@Test

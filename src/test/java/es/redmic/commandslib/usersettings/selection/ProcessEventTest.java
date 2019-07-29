@@ -42,6 +42,7 @@ import es.redmic.commandslib.usersettings.commands.ClearCommand;
 import es.redmic.commandslib.usersettings.commands.DeselectCommand;
 import es.redmic.commandslib.usersettings.commands.SelectCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SelectionDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clearselection.PartialClearSelectionEvent;
@@ -56,6 +57,8 @@ public class ProcessEventTest {
 
 	SettingsStateStore settingsStateStore;
 
+	UserService userService;
+
 	SelectionAggregate agg;
 
 	@Before
@@ -63,7 +66,11 @@ public class ProcessEventTest {
 
 		settingsStateStore = Mockito.mock(SettingsStateStore.class);
 
-		agg = new SelectionAggregate(settingsStateStore);
+		userService = Mockito.mock(UserService.class);
+
+		agg = new SelectionAggregate(settingsStateStore, userService);
+
+		when(userService.getUserId()).thenReturn("13");
 	}
 
 	@Test

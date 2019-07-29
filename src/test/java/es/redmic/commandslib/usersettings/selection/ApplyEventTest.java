@@ -37,6 +37,7 @@ import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.usersettings.aggregate.SelectionAggregate;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionCancelledEvent;
 import es.redmic.usersettingslib.events.clearselection.ClearSelectionEvent;
@@ -58,6 +59,8 @@ public class ApplyEventTest {
 
 	SettingsStateStore settingsStateStore;
 
+	UserService userService;
+
 	SelectionAggregate agg;
 
 	@Before
@@ -65,7 +68,9 @@ public class ApplyEventTest {
 
 		settingsStateStore = Mockito.mock(SettingsStateStore.class);
 
-		agg = new SelectionAggregate(settingsStateStore);
+		userService = Mockito.mock(UserService.class);
+
+		agg = new SelectionAggregate(settingsStateStore, userService);
 	}
 
 	@Test

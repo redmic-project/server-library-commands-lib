@@ -110,6 +110,8 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 	private String userId = "13";
 
+	private String otherUserId = "15";
+
 	@BeforeClass
 	public static void setup() {
 
@@ -225,6 +227,39 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(event.getSettings().getService(), serviceName);
 	}
 
+	// Envía un selectRequestl para una selección existente y debe provocar una
+	// excepción por intentar modificar settings de otros usuarios
+	@Test
+	public void selectRequest_ThrowSettingsChangeForbiddenException_IfSettingsIsFromAnotherUser() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(CODE);
+		selectedEvent.getSettings().setName(null);
+		selectedEvent.getSettings().setService(serviceName);
+		selectedEvent.getSettings().setUserId(otherUserId);
+		selectedEvent.setUserId(otherUserId);
+
+		when(settingsStateStore.get(anyString())).thenReturn(selectedEvent);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/select/" + id)
+						.header("Authorization", "Bearer " + getTokenOAGUser())
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isForbidden());
+	}
+
 	@Test
 	public void deselectRequest_ReturnSelection_IfWasSuccess() throws Exception {
 
@@ -271,6 +306,39 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(expectedEvent.getType(), event.getType());
 		assertEquals(expectedEvent.getVersion(), event.getVersion());
 		assertEquals(serviceName, event.getSettings().getService());
+	}
+
+	// Envía un deselectRequestl para una selección existente y debe provocar una
+	// excepción por intentar modificar settings de otros usuarios
+	@Test
+	public void deselectRequest_ThrowSettingsChangeForbiddenException_IfSettingsIsFromAnotherUser() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(CODE);
+		selectedEvent.getSettings().setName(null);
+		selectedEvent.getSettings().setService(serviceName);
+		selectedEvent.getSettings().setUserId(otherUserId);
+		selectedEvent.setUserId(otherUserId);
+
+		when(settingsStateStore.get(anyString())).thenReturn(selectedEvent);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/deselect/" + id)
+						.header("Authorization", "Bearer " + getTokenOAGUser())
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -320,6 +388,41 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(expectedEvent.getType(), event.getType());
 		assertEquals(expectedEvent.getVersion(), event.getVersion());
 		assertEquals(serviceName, event.getSettings().getService());
+	}
+
+	// Envía un clearSelectionRequest para una selección existente y debe provocar
+	// una
+	// excepción por intentar modificar settings de otros usuarios
+	@Test
+	public void clearSelectionRequest_ThrowSettingsChangeForbiddenException_IfSettingsIsFromAnotherUser()
+			throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(CODE);
+		selectedEvent.getSettings().setName(null);
+		selectedEvent.getSettings().setService(serviceName);
+		selectedEvent.getSettings().setUserId(otherUserId);
+		selectedEvent.setUserId(otherUserId);
+
+		when(settingsStateStore.get(anyString())).thenReturn(selectedEvent);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/clearselection/" + id)
+						.header("Authorization", "Bearer " + getTokenOAGUser())
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -421,6 +524,34 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	}
 
 	@Test
+	public void updateRequest_ThrowSettingsChangeForbiddenException_IfSettingsIsFromAnotherUser() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId(otherUserId);
+		evt.setUserId(otherUserId);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(CODE);
+		persistenceDTO.setSettingsId(evt.getAggregateId());
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/" + id)
+						.header("Authorization", "Bearer " + getTokenOAGUser())
+						.content(mapper.writeValueAsString(persistenceDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
 	public void deleteRequest_ReturnSuccessItem_IfWasSuccess() throws Exception {
 
 		String CODE = UUID.randomUUID().toString();
@@ -456,6 +587,33 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	}
 
 	@Test
+	public void deleteRequest_ThrowSettingsChangeForbiddenException_IfSettingsIsFromAnotherUser() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent evt = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId(otherUserId);
+		evt.setUserId(otherUserId);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(CODE);
+		persistenceDTO.setSettingsId(evt.getAggregateId());
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+		.perform(MockMvcRequestBuilders.delete(SETTINGS_PATH + "/" + id)
+				.header("Authorization", "Bearer " + getTokenOAGUser())
+				.contentType(MediaType.APPLICATION_JSON)
+				.accept(MediaType.APPLICATION_JSON))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
 	public void deleteRequest_ReturnUnauthorized_IfUserIsNotLoggedIn() throws Exception {
 
 		String CODE = UUID.randomUUID().toString();
@@ -475,8 +633,6 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 	@Test
 	public void cloneRequest_ReturnSavedItem_IfWasSuccess() throws Exception {
-
-		String otherUserId = "15";
 
 		String CODE = UUID.randomUUID().toString();
 
@@ -560,7 +716,7 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 			logger.info("Comprobando evento UpdateSettingsAccessedDateEvent por acceso a settings");
 
 			assertEquals(settingsSavedEvent.getAggregateId(), event.getAggregateId());
-			assertEquals(settingsSavedEvent.getUserId(), event.getUserId());
+			assertEquals(expectedEvent.getUserId(), event.getUserId());
 		}
 	}
 

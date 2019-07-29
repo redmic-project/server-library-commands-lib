@@ -137,10 +137,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO select(SelectCommand cmd) {
 
-		SelectionAggregate agg = new SelectionAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando SelectCommand");
+		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
 		PartialSelectEvent event = agg.process(cmd);
 
@@ -148,15 +145,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-
-		event.setUserId(userId);
-		event.getSelection().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -170,10 +160,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO deselect(DeselectCommand cmd) {
 
-		SelectionAggregate agg = new SelectionAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando DeselectCommand");
+		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
 		PartialDeselectEvent event = agg.process(cmd);
 
@@ -181,18 +168,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-
-		event.setUserId(userId);
-		event.getSelection().setUserId(userId);
-
-		event.setUserId(userId);
-		event.getSelection().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -206,10 +183,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO clear(ClearCommand cmd) {
 
-		SelectionAggregate agg = new SelectionAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando ClearCommand");
+		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
 		PartialClearSelectionEvent event = agg.process(cmd);
 
@@ -217,15 +191,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-
-		event.setUserId(userId);
-		event.getSelection().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -239,10 +206,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO save(SaveSettingsCommand cmd) {
 
-		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando SaveSettingsCommand");
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
 		PartialSaveSettingsEvent event = agg.process(cmd);
 
@@ -250,15 +214,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-
-		event.setUserId(userId);
-		event.getPersistence().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -272,10 +229,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO update(UpdateSettingsCommand cmd) {
 
-		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando UpdateSettingsCommand");
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
 		PartialSaveSettingsEvent event = agg.process(cmd);
 
@@ -283,15 +237,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-
-		event.setUserId(userId);
-		event.getPersistence().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -305,10 +252,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO delete(DeleteSettingsCommand cmd) {
 
-		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando UpdateSettingsCommand");
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
 		CheckDeleteSettingsEvent event = agg.process(cmd);
 
@@ -316,12 +260,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		event.setUserId(userService.getUserId());
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -335,10 +275,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public SettingsDTO clone(CloneSettingsCommand cmd) {
 
-		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando CloneSettingsCommand");
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
 		CloneSettingsEvent event = agg.process(cmd);
 
@@ -346,14 +283,8 @@ public class SettingsCommandHandler extends CommandHandler {
 		if (event == null)
 			return null;
 
-		String userId = userService.getUserId();
-		event.setUserId(userId);
-		event.getPersistence().setUserId(userId);
-
 		// Se aplica el evento
 		agg.apply(event);
-
-		logger.debug("Aplicado evento: " + event.getType());
 
 		// Crea la espera hasta que se responda con evento completado
 		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
@@ -369,10 +300,7 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	public void updateSettingsAccessedDate(UpdateSettingsAccessedDateCommand cmd) {
 
-		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore);
-
-		// Se procesa el comando, obteniendo el evento generado
-		logger.debug("Procesando UpdateSettingsAccessedDateCommand");
+		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
 		UpdateSettingsAccessedDateEvent event = agg.process(cmd);
 
