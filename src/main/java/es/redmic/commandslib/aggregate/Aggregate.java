@@ -30,6 +30,7 @@ import es.redmic.brokerlib.avro.common.EventTypes;
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.exception.data.ItemNotFoundException;
+import es.redmic.exception.settings.SettingsChangeForbiddenException;
 
 public abstract class Aggregate {
 
@@ -156,5 +157,11 @@ public abstract class Aggregate {
 
 	public boolean isDeleted() {
 		return deleted;
+	}
+
+	protected void authorshipCheck(String userId, String historicalEventUserId) {
+
+		if (historicalEventUserId != null && !userId.equals(historicalEventUserId))
+			throw new SettingsChangeForbiddenException();
 	}
 }
