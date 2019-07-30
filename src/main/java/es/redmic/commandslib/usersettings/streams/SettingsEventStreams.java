@@ -616,9 +616,8 @@ public class SettingsEventStreams extends BaseStreams {
 			return SettingsEventFactory.getEvent(evt, SettingsEventTypes.DELETE_CHECKED);
 		}
 
-		// TODO: generar nueva excepción. Si es necesario, añadir argumentos
 		return SettingsEventFactory.getEvent(evt, SettingsEventTypes.CHECK_DELETE_FAILED,
-				ExceptionType.ES_SELECTION_WORK.toString(), null);
+				ExceptionType.DELETE_SETTINGS_NOT_ALLOWED.toString(), null);
 	}
 
 	private void processDeleteFailedStream(KStream<String, Event> events, KTable<String, Event> snapshotKTable) {

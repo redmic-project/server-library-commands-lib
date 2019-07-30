@@ -647,7 +647,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 	}
 
 	// Envía un evento de comprobación de que el elemento puede ser borrado y debe
-	// provocar un evento CheckDeleteSettingsFailedEvent ya que no está compartido
+	// provocar un evento CheckDeleteSettingsFailedEvent ya que está compartido
 	@Test
 	public void checkDeleteSettingsEvent_SendCheckDeleteSettingsFailedEvent_IfSettigsAreShared()
 			throws InterruptedException {
@@ -664,14 +664,16 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
 
-		Event confirm = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		Event failed = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
 
-		assertNotNull(confirm);
-		assertEquals(SettingsEventTypes.CHECK_DELETE_FAILED, confirm.getType());
-		assertEquals(event.getAggregateId(), confirm.getAggregateId());
-		assertEquals(event.getUserId(), confirm.getUserId());
-		assertEquals(event.getSessionId(), confirm.getSessionId());
-		assertEquals(event.getVersion(), confirm.getVersion());
+		assertNotNull(failed);
+		assertEquals(SettingsEventTypes.CHECK_DELETE_FAILED, failed.getType());
+		assertEquals(event.getAggregateId(), failed.getAggregateId());
+		assertEquals(event.getUserId(), failed.getUserId());
+		assertEquals(event.getSessionId(), failed.getSessionId());
+		assertEquals(event.getVersion(), failed.getVersion());
+		assertEquals(ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(),
+				((DeleteSettingsCheckFailedEvent) failed).getExceptionType());
 	}
 
 	// Envía un evento de confirmación de borrado y debe provocar un evento Deleted
