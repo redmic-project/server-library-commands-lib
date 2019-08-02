@@ -132,4 +132,16 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 			completableFeatures.remove(sessionId);
 		}
 	}
+
+	protected <T> T sendEventAndWaitResult(Event event, String topic) {
+
+		// Crea la espera hasta que se responda con evento completado
+		CompletableFuture<T> completableFuture = getCompletableFeature(event.getSessionId());
+
+		// Emite evento para enviar a kafka
+		publishToKafka(event, topic);
+
+		// Obtiene el resultado cuando se resuelva la espera
+		return getResult(event.getSessionId(), completableFuture);
+	}
 }
