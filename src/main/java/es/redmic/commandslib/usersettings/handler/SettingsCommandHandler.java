@@ -1,7 +1,5 @@
 package es.redmic.commandslib.usersettings.handler;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.annotation.PostConstruct;
 
 /*-
@@ -148,14 +146,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO deselect(DeselectCommand cmd) {
@@ -171,14 +162,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO clear(ClearCommand cmd) {
@@ -194,14 +178,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO save(SaveSettingsCommand cmd) {
@@ -217,14 +194,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO update(UpdateSettingsCommand cmd) {
@@ -240,14 +210,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO delete(DeleteSettingsCommand cmd) {
@@ -263,14 +226,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public SettingsDTO clone(CloneSettingsCommand cmd) {
@@ -286,16 +242,9 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<SettingsDTO> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, settingsTopic);
-
 		updateSettingsAccessedDate(new UpdateSettingsAccessedDateCommand(cmd.getPersistence().getSettingsId()));
 
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
+		return sendEventAndWaitResult(event, settingsTopic);
 	}
 
 	public void updateSettingsAccessedDate(UpdateSettingsAccessedDateCommand cmd) {
@@ -316,17 +265,12 @@ public class SettingsCommandHandler extends CommandHandler {
 	@KafkaHandler
 	private void listen(SelectedEvent event) {
 
-		logger.debug("Item seleccionado. Selección: " + event.getAggregateId());
-
 		// El evento selected se envía desde el stream
-
 		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
 	private void listen(SelectCancelledEvent event) {
-
-		logger.debug("Error seleccionando item. Selección: " + event.getAggregateId());
 
 		resolveCommand(event.getSessionId(),
 				ExceptionFactory.getException(event.getExceptionType(), event.getArguments()));
@@ -337,17 +281,12 @@ public class SettingsCommandHandler extends CommandHandler {
 	@KafkaHandler
 	private void listen(DeselectedEvent event) {
 
-		logger.debug("Item deseleccionado. Selección: " + event.getAggregateId());
-
 		// El evento deselected se envía desde el stream
-
 		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
 	private void listen(DeselectCancelledEvent event) {
-
-		logger.debug("Error deseleccionando item. Selección: " + event.getAggregateId());
 
 		resolveCommand(event.getSessionId(),
 				ExceptionFactory.getException(event.getExceptionType(), event.getArguments()));
@@ -358,8 +297,6 @@ public class SettingsCommandHandler extends CommandHandler {
 	@KafkaHandler
 	private void listen(SelectionClearedEvent event) {
 
-		logger.debug("Selección limpia. Selección: " + event.getAggregateId());
-
 		// El evento selectionCleared se envía desde el stream
 
 		resolveCommand(event.getSessionId(), event.getSettings());
@@ -367,8 +304,6 @@ public class SettingsCommandHandler extends CommandHandler {
 
 	@KafkaHandler
 	private void listen(ClearSelectionCancelledEvent event) {
-
-		logger.debug("Error limpiando selección. Selección: " + event.getAggregateId());
 
 		resolveCommand(event.getSessionId(),
 				ExceptionFactory.getException(event.getExceptionType(), event.getArguments()));
@@ -379,17 +314,12 @@ public class SettingsCommandHandler extends CommandHandler {
 	@KafkaHandler
 	private void listen(SettingsSavedEvent event) {
 
-		logger.debug("Selección guardada. Selección: " + event.getAggregateId());
-
 		// El evento settingsSaved se envía desde el stream
-
 		resolveCommand(event.getSessionId(), event.getSettings());
 	}
 
 	@KafkaHandler
 	private void listen(SaveSettingsCancelledEvent event) {
-
-		logger.debug("Error guardando selección. Selección: " + event.getAggregateId());
 
 		resolveCommand(event.getSessionId(),
 				ExceptionFactory.getException(event.getExceptionType(), event.getArguments()));
@@ -412,17 +342,12 @@ public class SettingsCommandHandler extends CommandHandler {
 	@KafkaHandler
 	private void listen(SettingsDeletedEvent event) {
 
-		logger.debug("Selección eliminada. Selección: " + event.getAggregateId());
-
 		// El evento settingsDeleted se envía desde el stream
-
 		resolveCommand(event.getSessionId());
 	}
 
 	@KafkaHandler
 	private void listen(DeleteSettingsCancelledEvent event) {
-
-		logger.debug("Error eliminando selección. Selección: " + event.getAggregateId());
 
 		resolveCommand(event.getSessionId(),
 				ExceptionFactory.getException(event.getExceptionType(), event.getArguments()));
