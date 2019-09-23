@@ -32,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -79,7 +80,8 @@ import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
  * #L%
  */
 
-public class SettingsRestBase extends DocumentationCommandBaseTest {
+@DirtiesContext
+public abstract class SettingsRestBase extends DocumentationCommandBaseTest {
 
 	@Value("${documentation.MICROSERVICE_HOST}")
 	private String HOST;
@@ -109,6 +111,8 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 	private String settings_topic;
 
 	private String userId = "13";
+
+	private String anonymousUserId = "1";
 
 	private String otherUserId = "15";
 
@@ -227,6 +231,55 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(event.getSettings().getService(), serviceName);
 	}
 
+	@Test
+	public void selectRequestLikeAnonymous_ReturnSelection_IfWasSuccess() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId(anonymousUserId);
+		evt.setUserId(anonymousUserId);
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/select/" + id)
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success", is(true)))
+				.andExpect(jsonPath("$.body", notNullValue()))
+				.andExpect(jsonPath("$.body.id", is(id)))
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(anonymousUserId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
+		
+		// @formatter:on
+
+		SelectEvent event = (SelectEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		SelectEvent expectedEvent = SettingsDataUtil.getSelectEvent(CODE);
+		assertNotNull(event);
+		assertEquals(event.getType(), expectedEvent.getType());
+		assertEquals(event.getVersion(), expectedEvent.getVersion());
+		assertEquals(event.getSettings().getService(), serviceName);
+	}
+
 	// Envía un selectRequestl para una selección existente y debe provocar una
 	// excepción por intentar modificar settings de otros usuarios
 	@Test
@@ -294,6 +347,54 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 				.andExpect(jsonPath("$.body.id", is(id)))
 				.andExpect(jsonPath("$.body.service", is(serviceName)))
 				.andExpect(jsonPath("$.body.userId", is(userId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(0)));
+		
+		// @formatter:on
+
+		DeselectEvent event = (DeselectEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		DeselectEvent expectedEvent = SettingsDataUtil.getDeselectEvent(CODE);
+		assertNotNull(event);
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
+	}
+
+	@Test
+	public void deselectRequestLikeAnonymous_ReturnSelection_IfWasSuccess() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId(anonymousUserId);
+		evt.setUserId(anonymousUserId);
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/deselect/" + id)
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success", is(true)))
+				.andExpect(jsonPath("$.body", notNullValue()))
+				.andExpect(jsonPath("$.body.id", is(id)))
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(anonymousUserId)))
 				.andExpect(jsonPath("$.body.selection", notNullValue()))
 				.andExpect(jsonPath("$.body.selection", hasSize(0)));
 		
@@ -390,6 +491,55 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(serviceName, event.getSettings().getService());
 	}
 
+	@Test
+	public void clearRequestLikeAnonymous_ReturnSelection_IfWasSuccess() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SelectedEvent evt = SettingsDataUtil.getSelectedEvent(CODE);
+		evt.getSettings().setName(null);
+		evt.getSettings().setService(serviceName);
+		evt.getSettings().setUserId(anonymousUserId);
+		evt.setUserId(anonymousUserId);
+
+		kafkaTemplate.send(settings_topic, evt.getAggregateId(), evt);
+
+		when(settingsStateStore.get(anyString())).thenReturn(evt);
+
+		SelectionDTO selectionDTO = SettingsDataUtil.getSelectionDTO(CODE);
+		selectionDTO.setService(null);
+		selectionDTO.setUserId(null);
+		selectionDTO.getSelection().clear();
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/clearselection/" + id)
+						.content(mapper.writeValueAsString(selectionDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success", is(true)))
+				.andExpect(jsonPath("$.body", notNullValue()))
+				.andExpect(jsonPath("$.body.id", is(id)))
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(anonymousUserId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(0)));
+		
+		// @formatter:on
+
+		ClearSelectionEvent event = (ClearSelectionEvent) blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		ClearSelectionEvent expectedEvent = SettingsDataUtil.getClearEvent(CODE);
+		assertNotNull(event);
+		assertEquals(expectedEvent.getType(), event.getType());
+		assertEquals(expectedEvent.getVersion(), event.getVersion());
+		assertEquals(serviceName, event.getSettings().getService());
+	}
+
 	// Envía un clearSelectionRequest para una selección existente y debe provocar
 	// una
 	// excepción por intentar modificar settings de otros usuarios
@@ -466,6 +616,23 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 		assertEquals(expectedEvent.getType(), event.getType());
 		assertEquals(expectedEvent.getVersion(), event.getVersion());
 		assertEquals(serviceName, event.getSettings().getService());
+	}
+
+	@Test
+	public void saveRequest_ReturnUnauthorized_IfUserIsNotLoggedIn() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// @formatter:off
+		
+		this.mockMvc
+				.perform(post(SETTINGS_PATH)
+						.content(mapper.writeValueAsString(SettingsDataUtil.getPersistenceDTO(CODE)))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isUnauthorized());
+		
+		// @formatter:on
 	}
 
 	@Test
@@ -549,6 +716,25 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isForbidden());
+	}
+	
+	@Test
+	public void updateRequest_ReturnUnauthorized_IfUserIsNotLoggedIn() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/" + id)
+						.content(mapper.writeValueAsString(SettingsDataUtil.getPersistenceDTO(CODE)))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isUnauthorized());
+		
+		// @formatter:on
 	}
 
 	@Test
@@ -686,6 +872,53 @@ public class SettingsRestBase extends DocumentationCommandBaseTest {
 
 		checkCloneEvents(thirdEvent, settingsSavedEvent, expectedEvent);
 
+	}
+
+	@Test
+	public void cloneRequestLikeAnonymous_ReturnSavedItem_IfWasSuccess() throws Exception {
+
+		String CODE = UUID.randomUUID().toString();
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(CODE);
+		settingsSavedEvent.getSettings().setName(null);
+		settingsSavedEvent.getSettings().setService(serviceName);
+		settingsSavedEvent.getSettings().setUserId(userId);
+		settingsSavedEvent.setUserId(userId);
+
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+
+		when(settingsStateStore.get(settingsSavedEvent.getAggregateId())).thenReturn(settingsSavedEvent);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(UUID.randomUUID().toString());
+		persistenceDTO.setUserId(null);
+		persistenceDTO.setSettingsId(settingsSavedEvent.getAggregateId());
+
+		// @formatter:off
+		
+		String id = SettingsDataUtil.PREFIX + CODE;
+		
+		this.mockMvc
+				.perform(put(SETTINGS_PATH + "/clone/" + id)
+						.content(mapper.writeValueAsString(persistenceDTO))
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success", is(true)))
+				.andExpect(jsonPath("$.body", notNullValue()))
+				.andExpect(jsonPath("$.body.id", is(not(equalTo(id)))))
+				.andExpect(jsonPath("$.body.service", is(serviceName)))
+				.andExpect(jsonPath("$.body.userId", is(anonymousUserId)))
+				.andExpect(jsonPath("$.body.selection", notNullValue()))
+				.andExpect(jsonPath("$.body.selection", hasSize(1)))
+				.andExpect(jsonPath("$.body.selection", hasItem("1")));
+		
+		// @formatter:on
+
+		blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		blockingQueue.poll(50, TimeUnit.SECONDS);
+
+		blockingQueue.poll(50, TimeUnit.SECONDS);
 	}
 
 	private void checkCloneEvents(Event event, SettingsSavedEvent settingsSavedEvent, SaveSettingsEvent expectedEvent) {
