@@ -36,6 +36,7 @@ import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.kafka.annotation.KafkaHandler;
 
 import es.redmic.brokerlib.avro.common.Event;
+import es.redmic.commandslib.aggregate.Aggregate;
 import es.redmic.commandslib.exceptions.ConfirmationTimeoutException;
 import es.redmic.commandslib.gateway.BrokerEvent;
 import es.redmic.exception.common.BaseException;
@@ -43,7 +44,7 @@ import es.redmic.exception.common.BaseException;
 public abstract class CommandHandler implements ApplicationEventPublisherAware {
 
 	@Value("${rest.eventsource.timeout.ms}")
-	private long timeoutMS;
+	protected long timeoutMS;
 
 	protected static Logger logger = LogManager.getLogger();
 
@@ -87,12 +88,38 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		});
 	}
 
+	protected void unlockStatus(Aggregate agg, String id, String topic) {
+
+		Event rollbackEvent = agg.getRollbackEventFromBlockedEvent(id, timeoutMS);
+
+		if (rollbackEvent != null)
+			publishToKafka(rollbackEvent, topic);
+	}
+
+	protected <T> T sendEventAndWaitResult(Aggregate agg, Event event, String topic) {
+
+		// Crea la espera hasta que se responda con evento completado
+		CompletableFuture<T> completableFuture = getCompletableFeature(event.getSessionId());
+
+		// Emite evento para enviar a kafka
+		publishToKafka(event, topic);
+
+		// Obtiene el resultado cuando se resuelva la espera
+		try {
+			return getResult(event.getSessionId(), completableFuture);
+		} catch (ConfirmationTimeoutException e) {
+			publishToKafka(agg.getRollbackEvent(event), topic);
+			throw e;
+		}
+	}
+
 	// Crea un completableFuture para esperar por el evento de confirmación o error.
 	protected <T> CompletableFuture<T> getCompletableFeature(String sessionId) {
 
 		// Añade espera para resolver la petición
 		CompletableFuture<Object> future = new CompletableFuture<Object>();
 		completableFeatures.put(sessionId, future);
+
 		// Cuando se resuelve la espera, se resuelve con el dto
 		return future.thenApplyAsync(obj -> apply(obj));
 	}
@@ -120,28 +147,21 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		try {
 			return completableFuture.get(timeoutMS, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException | TimeoutException e) {
-			// TODO: Enviar alerta ya que ha quedado un evento sin acabar el ciclo
+			e.printStackTrace();
 			logger.error("Error. No se ha recibido confirmación de la acción realizada.");
+
 			throw new ConfirmationTimeoutException();
 		} catch (ExecutionException e) {
+			e.printStackTrace();
+
 			if (e.getCause() instanceof BaseException)
 				throw ((BaseException) e.getCause()); // Error enviado desde la vista
-			else
-				throw new ConfirmationTimeoutException();
+
+			logger.error("Error. Excepción no controlada en la ejecución.");
+
+			throw new ConfirmationTimeoutException();
 		} finally {
 			completableFeatures.remove(sessionId);
 		}
-	}
-
-	protected <T> T sendEventAndWaitResult(Event event, String topic) {
-
-		// Crea la espera hasta que se responda con evento completado
-		CompletableFuture<T> completableFuture = getCompletableFeature(event.getSessionId());
-
-		// Emite evento para enviar a kafka
-		publishToKafka(event, topic);
-
-		// Obtiene el resultado cuando se resuelva la espera
-		return getResult(event.getSessionId(), completableFuture);
 	}
 }

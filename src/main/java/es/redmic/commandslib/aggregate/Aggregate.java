@@ -27,10 +27,12 @@ import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.brokerlib.avro.common.EventTypes;
+import es.redmic.brokerlib.avro.fail.RollbackEvent;
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.exception.data.ItemNotFoundException;
 import es.redmic.exception.settings.SettingsChangeForbiddenException;
+import es.redmic.usersettingslib.events.SettingsEventTypes;
 
 public abstract class Aggregate {
 
@@ -90,9 +92,6 @@ public abstract class Aggregate {
 	protected void check(Event event) {
 
 		if (isLocked(event.getType()) && !event.getType().equals(EventTypes.DELETED)) {
-
-			// TODO: Si el tiempo entre el último y el actual es superior a el máximo del
-			// ciclo, compensar.
 
 			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ",
 					event.getAggregateId());
@@ -163,5 +162,25 @@ public abstract class Aggregate {
 
 		if (historicalEventUserId != null && !userId.equals(historicalEventUserId))
 			throw new SettingsChangeForbiddenException();
+	}
+
+	public Event getRollbackEventFromBlockedEvent(String id, long timeoutMS) {
+
+		Event blockedEvent = getItemFromStateStore(id);
+
+		if (!SettingsEventTypes.isSnapshot(blockedEvent.getType())
+				&& blockedEventRequiresRollback(blockedEvent, timeoutMS))
+			return getRollbackEvent(blockedEvent);
+		return null;
+	}
+
+	private boolean blockedEventRequiresRollback(Event event, long timeoutMS) {
+
+		return event.getDate().plus(timeoutMS).isAfterNow();
+	}
+
+	public Event getRollbackEvent(Event sourceEvent) {
+
+		return new RollbackEvent().buildFrom(sourceEvent);
 	}
 }
