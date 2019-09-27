@@ -192,7 +192,6 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		// Envía selected para meterlo en el stream
 		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "3");
-		selectedEvent.getSettings().setUserId("3");
 		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
 		blockingQueue.poll(60, TimeUnit.SECONDS);
 
@@ -320,7 +319,6 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		// Envía selected para meterlo en el stream
 		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "8");
-		selectedEvent.getSettings().setUserId("3");
 		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
 		blockingQueue.poll(60, TimeUnit.SECONDS);
 
@@ -440,7 +438,6 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		// Envía selected para meterlo en el stream
 		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "12");
-		selectedEvent.getSettings().setUserId("3");
 		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
 		blockingQueue.poll(60, TimeUnit.SECONDS);
 
@@ -672,7 +669,7 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertEquals(event.getUserId(), failed.getUserId());
 		assertEquals(event.getSessionId(), failed.getSessionId());
 		assertEquals(event.getVersion(), failed.getVersion());
-		assertEquals(ExceptionType.SETTINGS_TO_SAVE_NOT_FOUND_EXCEPTION.toString(),
+		assertEquals(ExceptionType.DELETE_SETTINGS_NOT_ALLOWED.toString(),
 				((DeleteSettingsCheckFailedEvent) failed).getExceptionType());
 	}
 
