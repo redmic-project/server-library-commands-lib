@@ -825,6 +825,7 @@ public abstract class SettingsRestBase extends DocumentationCommandBaseTest {
 		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(CODE);
 		settingsSavedEvent.getSettings().setName(null);
 		settingsSavedEvent.getSettings().setService(serviceName);
+		settingsSavedEvent.getSettings().setShared(true);
 		settingsSavedEvent.getSettings().setUserId(otherUserId);
 		settingsSavedEvent.setUserId(otherUserId);
 
@@ -883,6 +884,7 @@ public abstract class SettingsRestBase extends DocumentationCommandBaseTest {
 		settingsSavedEvent.getSettings().setName(null);
 		settingsSavedEvent.getSettings().setService(serviceName);
 		settingsSavedEvent.getSettings().setUserId(userId);
+		settingsSavedEvent.getSettings().setShared(true);
 		settingsSavedEvent.setUserId(userId);
 
 		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);

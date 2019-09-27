@@ -44,12 +44,14 @@ import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCom
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
 import es.redmic.exception.data.ItemNotFoundException;
+import es.redmic.exception.settings.SettingsChangeForbiddenException;
 import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.PersistenceDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
 import es.redmic.usersettingslib.events.clone.CloneSettingsEvent;
 import es.redmic.usersettingslib.events.delete.CheckDeleteSettingsEvent;
 import es.redmic.usersettingslib.events.save.PartialSaveSettingsEvent;
+import es.redmic.usersettingslib.events.save.SettingsSavedEvent;
 import es.redmic.usersettingslib.events.update.UpdateSettingsAccessedDateEvent;
 import es.redmic.usersettingslib.unit.utils.SettingsDataUtil;
 
@@ -156,9 +158,12 @@ public class ProcessEventTest {
 	}
 
 	@Test
-	public void processCloneSettingsCommand_ReturnCloneSettingsEvent_IfProcessIsOk() {
+	public void processCloneSettingsCommand_ReturnCloneSettingsEvent_IfIsYourOwnSettings() {
 
 		PersistenceDTO persistence = SettingsDataUtil.getPersistenceDTO(code);
+
+		when(settingsStateStore.get(persistence.getId()))
+				.thenReturn(SettingsDataUtil.getSettingsSavedEvent(persistence.getId()));
 
 		String serviceName = "/atlas/commands/layer/settings";
 		CloneSettingsCommand command = new CloneSettingsCommand(persistence.getId(), serviceName);
@@ -176,6 +181,53 @@ public class ProcessEventTest {
 		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getUpdated());
 		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getAccessed());
 		assertEquals(serviceName, evt.getPersistence().getService());
+	}
+
+	@Test
+	public void processCloneSettingsCommand_ReturnCloneSettingsEvent_IfIsAnotherUserSettingsAndShared() {
+
+		PersistenceDTO persistence = SettingsDataUtil.getPersistenceDTO(code);
+
+		SettingsSavedEvent source = SettingsDataUtil.getSettingsSavedEvent(persistence.getId());
+		source.setUserId("99");
+		source.getSettings().setUserId("99");
+		source.getSettings().setShared(true);
+
+		when(settingsStateStore.get(persistence.getId())).thenReturn(source);
+
+		String serviceName = "/atlas/commands/layer/settings";
+		CloneSettingsCommand command = new CloneSettingsCommand(persistence.getId(), serviceName);
+
+		CloneSettingsEvent evt = agg.process(command);
+
+		assertNotNull(evt);
+		assertNotNull(evt.getDate());
+		assertNotNull(evt.getId());
+		assertNotNull(evt.getAggregateId());
+		assertNotEquals(evt.getAggregateId(), persistence.getId());
+		assertEquals(evt.getType(), SettingsEventTypes.CLONE);
+		assertTrue(evt.getVersion().equals(1));
+		assertEquals(evt.getAggregateId(), evt.getPersistence().getId());
+		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getUpdated());
+		assertEquals(evt.getPersistence().getInserted(), evt.getPersistence().getAccessed());
+		assertEquals(serviceName, evt.getPersistence().getService());
+	}
+
+	@Test(expected = SettingsChangeForbiddenException.class)
+	public void processCloneSettingsCommand_ThrowSettingsChangeForbiddenException_IfIsAnotherUserSettingsAndNotShared() {
+
+		PersistenceDTO persistence = SettingsDataUtil.getPersistenceDTO(code);
+
+		SettingsSavedEvent source = SettingsDataUtil.getSettingsSavedEvent(persistence.getId());
+		source.setUserId("99");
+		source.getSettings().setUserId("99");
+
+		when(settingsStateStore.get(persistence.getId())).thenReturn(source);
+
+		String serviceName = "/atlas/commands/layer/settings";
+		CloneSettingsCommand command = new CloneSettingsCommand(persistence.getId(), serviceName);
+
+		agg.process(command);
 	}
 
 	@Test
