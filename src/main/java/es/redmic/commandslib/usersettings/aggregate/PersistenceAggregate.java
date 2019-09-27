@@ -31,6 +31,7 @@ import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsAccessedDateCommand;
 import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.statestore.SettingsStateStore;
+import es.redmic.exception.settings.SettingsChangeForbiddenException;
 import es.redmic.restlib.config.UserService;
 import es.redmic.usersettingslib.dto.SettingsDTO;
 import es.redmic.usersettingslib.events.SettingsEventTypes;
@@ -144,7 +145,20 @@ public class PersistenceAggregate extends Aggregate {
 			return null;
 		}
 
+		String settingsId = cmd.getPersistence().getSettingsId();
+
+		Event state = getStateFromHistory(settingsId);
+
+		loadFromHistory(state);
+
+		checkState(settingsId, state.getType());
+
+		reset();
+
 		this.setAggregateId(id);
+
+		if (!(state.getUserId().equals(userId) || ((SettingsEvent) state).getSettings().getShared()))
+			throw new SettingsChangeForbiddenException();
 
 		CloneSettingsEvent evt = new CloneSettingsEvent(cmd.getPersistence());
 		evt.setAggregateId(id);
