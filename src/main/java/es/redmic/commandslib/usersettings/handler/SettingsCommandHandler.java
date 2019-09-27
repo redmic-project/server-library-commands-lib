@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
 
 import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.commandslib.commands.CommandHandler;
+import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.commandslib.streaming.common.StreamConfig;
 import es.redmic.commandslib.streaming.common.StreamConfig.Builder;
 import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
@@ -137,7 +138,15 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
-		PartialSelectEvent event = agg.process(cmd);
+		PartialSelectEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -146,14 +155,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO deselect(DeselectCommand cmd) {
 
 		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
-		PartialDeselectEvent event = agg.process(cmd);
+		PartialDeselectEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -162,14 +179,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO clear(ClearCommand cmd) {
 
 		SelectionAggregate agg = new SelectionAggregate(settingsStateStore, userService);
 
-		PartialClearSelectionEvent event = agg.process(cmd);
+		PartialClearSelectionEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -178,14 +203,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO save(SaveSettingsCommand cmd) {
 
 		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
-		PartialSaveSettingsEvent event = agg.process(cmd);
+		PartialSaveSettingsEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -194,14 +227,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO update(UpdateSettingsCommand cmd) {
 
 		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
-		PartialSaveSettingsEvent event = agg.process(cmd);
+		PartialSaveSettingsEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -210,14 +251,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO delete(DeleteSettingsCommand cmd) {
 
 		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
-		CheckDeleteSettingsEvent event = agg.process(cmd);
+		CheckDeleteSettingsEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getSettingsId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -226,14 +275,22 @@ public class SettingsCommandHandler extends CommandHandler {
 		// Se aplica el evento
 		agg.apply(event);
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public SettingsDTO clone(CloneSettingsCommand cmd) {
 
 		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
-		CloneSettingsEvent event = agg.process(cmd);
+		CloneSettingsEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
@@ -244,14 +301,22 @@ public class SettingsCommandHandler extends CommandHandler {
 
 		updateSettingsAccessedDate(new UpdateSettingsAccessedDateCommand(cmd.getPersistence().getSettingsId()));
 
-		return sendEventAndWaitResult(event, settingsTopic);
+		return sendEventAndWaitResult(agg, event, settingsTopic);
 	}
 
 	public void updateSettingsAccessedDate(UpdateSettingsAccessedDateCommand cmd) {
 
 		PersistenceAggregate agg = new PersistenceAggregate(settingsStateStore, userService);
 
-		UpdateSettingsAccessedDateEvent event = agg.process(cmd);
+		UpdateSettingsAccessedDateEvent event;
+
+		try {
+			event = agg.process(cmd);
+		} catch (ItemLockedException e) {
+
+			unlockStatus(agg, cmd.getSettingsId(), settingsTopic);
+			throw e;
+		}
 
 		// Si no se genera evento significa que no se debe aplicar
 		if (event == null)
