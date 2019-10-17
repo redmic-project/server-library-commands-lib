@@ -553,6 +553,10 @@ public class SettingsEventStreams extends BaseStreams {
 		sourceSettings.setName(null);
 		sourceSettings.setShared(false);
 		sourceSettings.setUserId(cloneEvent.getUserId());
+		DateTime currentDateTime = DateTime.now();
+		sourceSettings.setInserted(currentDateTime);
+		sourceSettings.setUpdated(currentDateTime);
+		sourceSettings.setAccessed(null);
 
 		return SettingsEventFactory.getEvent(cloneEvent, SettingsEventTypes.SAVE, sourceSettings);
 	}
