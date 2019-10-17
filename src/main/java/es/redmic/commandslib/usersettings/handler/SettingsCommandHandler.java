@@ -143,7 +143,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
 			throw e;
 		}
@@ -167,7 +167,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
 			throw e;
 		}
@@ -191,7 +191,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getSelection().getId(), settingsTopic);
 			throw e;
 		}
@@ -215,7 +215,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
 			throw e;
 		}
@@ -239,7 +239,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
 			throw e;
 		}
@@ -263,7 +263,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getSettingsId(), settingsTopic);
 			throw e;
 		}
@@ -287,7 +287,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getPersistence().getId(), settingsTopic);
 			throw e;
 		}
@@ -313,7 +313,7 @@ public class SettingsCommandHandler extends CommandHandler {
 		try {
 			event = agg.process(cmd);
 		} catch (ItemLockedException e) {
-
+			e.printStackTrace();
 			unlockStatus(agg, cmd.getSettingsId(), settingsTopic);
 			throw e;
 		}

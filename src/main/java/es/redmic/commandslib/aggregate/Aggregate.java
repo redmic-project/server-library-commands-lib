@@ -95,6 +95,7 @@ public abstract class Aggregate {
 
 			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ",
 					event.getAggregateId());
+			logger.error("Item bloqueado por un evento de tipo: " + event.getType());
 			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}

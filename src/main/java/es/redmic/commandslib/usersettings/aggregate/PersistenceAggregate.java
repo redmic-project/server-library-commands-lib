@@ -228,6 +228,7 @@ public class PersistenceAggregate extends Aggregate {
 			apply((SettingsCancelledEvent) event);
 			break;
 		default:
+			logger.error("Item bloqueado por un evento de tipo: " + eventType);
 			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}
