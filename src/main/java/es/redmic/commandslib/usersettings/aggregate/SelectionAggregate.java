@@ -154,17 +154,18 @@ public class SelectionAggregate extends Aggregate {
 		String eventType = event.getType();
 
 		switch (eventType) {
+		case "SAVED":
 		case "SELECTED":
 		case "DESELECTED":
 		case "SELECTION_CLEARED":
-			logger.debug("Selección modificada");
 			apply((SettingsEvent) event);
 			break;
 		// CANCELLED
+		case "SAVE_CANCELLED":
+		case "DELETE_CANCELLED":
 		case "SELECT_CANCELLED":
 		case "DESELECT_CANCELLED":
 		case "CLEAR_SELECTION_CANCELLED":
-			logger.debug("Compensación por selección fallida");
 			apply((SettingsCancelledEvent) event);
 			break;
 		default:

@@ -144,6 +144,47 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNull(settings.getName());
 	}
 
+	// Envía un evento select para una nueva selección clonada y debe provocar un
+	// evento
+	// Select con settings dentro y la nueva selección
+	@Test
+	public void partialSelectEventInCloneSelection_SendSelectEventWithNewSelection_IfReceivesSuccess()
+			throws Exception {
+
+		// Envía select para meterlo en el stream
+		SettingsSavedEvent savedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "111");
+		savedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, savedEvent.getAggregateId(), savedEvent);
+		blockingQueue.poll(20, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		PartialSelectEvent partialSelectEvent = SettingsDataUtil.getPartialSelectEvent(code + "111");
+		partialSelectEvent.getSelection().getSelection().clear();
+		partialSelectEvent.getSelection().getSelection().add("2");
+		kafkaTemplate.send(settings_topic, partialSelectEvent.getAggregateId(), partialSelectEvent);
+
+		Event select = (Event) blockingQueue.poll(120, TimeUnit.SECONDS);
+
+		assertNotNull(select);
+		assertEquals(SettingsEventTypes.SELECT, select.getType());
+
+		SelectionDTO selectionExpected = partialSelectEvent.getSelection();
+		SettingsDTO settings = ((SettingsEvent) select).getSettings();
+
+		assertNotNull(settings.getService());
+		assertEquals(selectionExpected.getService(), settings.getService());
+
+		List<String> selection = savedEvent.getSettings().getSelection();
+		selection.addAll(selectionExpected.getSelection());
+
+		assertEquals(selection.size(), settings.getSelection().size());
+		selection.removeAll(settings.getSelection());
+		assertEquals(0, selection.size());
+		assertFalse(settings.getShared());
+		assertNull(settings.getName());
+	}
+
 	// Envía un evento parcial para una selección existente y debe provocar un
 	// evento Select con settings dentro y la unión de la nueva selección con la que
 	// ya existía
