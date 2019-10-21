@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.brokerlib.avro.common.EventTypes;
-import es.redmic.brokerlib.avro.fail.RollbackEvent;
+import es.redmic.brokerlib.avro.fail.PrepareRollbackEvent;
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.exception.data.ItemNotFoundException;
@@ -182,6 +182,12 @@ public abstract class Aggregate {
 
 	public Event getRollbackEvent(Event sourceEvent) {
 
-		return new RollbackEvent().buildFrom(sourceEvent);
+		logger.error(
+				"Un error en el sistema ha dejado un evento en estado bloqueado. Generando evento rollback para evento bloqueado de tipo "
+						+ sourceEvent.getType() + ". ItemId : " + sourceEvent.getAggregateId());
+
+		PrepareRollbackEvent event = new PrepareRollbackEvent().buildFrom(sourceEvent);
+		event.setFailEventType(sourceEvent.getType());
+		return event;
 	}
 }
