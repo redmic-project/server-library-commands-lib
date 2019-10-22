@@ -111,6 +111,8 @@ public class SettingsEventStreams extends BaseStreams {
 
 		processUpdateSettingsAccessedDate(events, snapshotKTable);
 
+		proccessRollbackStream(events, snapshotKTable);
+
 		return new KafkaStreams(builder.build(),
 				StreamUtils.baseStreamsConfig(bootstrapServers, stateStoreDir, serviceId, schemaRegistry));
 	}
@@ -647,6 +649,25 @@ public class SettingsEventStreams extends BaseStreams {
 
 		return SettingsEventFactory.getEvent(failedEvent, SettingsEventTypes.DELETE_CANCELLED, settings,
 				eventError.getExceptionType(), eventError.getArguments());
+	}
+
+	private void proccessRollbackStream(KStream<String, Event> events, KTable<String, Event> successEventsTable) {
+
+		// Stream filtrado por eventos pre rollback
+		KStream<String, Event> prepareRollbackEvents = events
+				.filter((id, event) -> (EventTypes.PREPARE_ROLLBACK.equals(event.getType())));
+
+		// Join por id, mandando a kafka el evento específico
+		prepareRollbackEvents.join(successEventsTable,
+				(prepareRollbackEvent, lastSuccessEvent) -> getRollbackEvent(prepareRollbackEvent, lastSuccessEvent))
+				.to(topic);
+	}
+
+	private Event getRollbackEvent(Event prepareRollbackEvent, Event lastSuccessEvent) {
+
+		return SettingsEventFactory.getEvent(prepareRollbackEvent, SettingsEventTypes.ROLLBACK,
+				((SettingsEvent) lastSuccessEvent).getSettings());
+
 	}
 
 	private boolean changeSelectionIsGranted(SettingsDTO settings, SelectionDTO newSelection) {
