@@ -28,11 +28,11 @@ import org.apache.logging.log4j.Logger;
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.brokerlib.avro.common.EventTypes;
 import es.redmic.brokerlib.avro.fail.PrepareRollbackEvent;
+import es.redmic.brokerlib.avro.fail.RollbackFailedEvent;
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.exception.data.ItemNotFoundException;
 import es.redmic.exception.settings.SettingsChangeForbiddenException;
-import es.redmic.usersettingslib.events.SettingsEventTypes;
 
 public abstract class Aggregate {
 
@@ -169,8 +169,7 @@ public abstract class Aggregate {
 
 		Event blockedEvent = getItemFromStateStore(id);
 
-		if (!SettingsEventTypes.isSnapshot(blockedEvent.getType())
-				&& blockedEventRequiresRollback(blockedEvent, timeoutMS))
+		if (blockedEventRequiresRollback(blockedEvent, timeoutMS))
 			return getRollbackEvent(blockedEvent);
 		return null;
 	}
@@ -186,8 +185,15 @@ public abstract class Aggregate {
 				"Un error en el sistema ha dejado un evento en estado bloqueado. Generando evento rollback para evento bloqueado de tipo "
 						+ sourceEvent.getType() + ". ItemId : " + sourceEvent.getAggregateId());
 
+		String failEventType = null;
+
+		if (sourceEvent instanceof RollbackFailedEvent)
+			failEventType = ((RollbackFailedEvent) sourceEvent).getFailEventType();
+		else
+			failEventType = sourceEvent.getType();
+
 		PrepareRollbackEvent event = new PrepareRollbackEvent().buildFrom(sourceEvent);
-		event.setFailEventType(sourceEvent.getType());
+		event.setFailEventType(failEventType);
 		return event;
 	}
 }
