@@ -30,12 +30,15 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.kafka.annotation.KafkaHandler;
 
+import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
+import es.redmic.brokerlib.avro.fail.RollbackFailedEvent;
 import es.redmic.commandslib.aggregate.Aggregate;
 import es.redmic.commandslib.exceptions.ConfirmationTimeoutException;
 import es.redmic.commandslib.gateway.BrokerEvent;
@@ -51,6 +54,16 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 	protected ApplicationEventPublisher eventPublisher;
 
 	protected Map<String, CompletableFuture<Object>> completableFeatures = new HashMap<>();
+
+	@Autowired
+	AlertService alertService;
+
+	@KafkaHandler
+	private void listen(RollbackFailedEvent event) {
+
+		alertService.errorAlert("Rollback fallido " + event.getAggregateId(), "Rollback de evento "
+				+ event.getFailEventType() + " con id " + event.getAggregateId() + " ha fallado.");
+	}
 
 	@Override
 	public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
@@ -92,8 +105,11 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 
 		Event rollbackEvent = agg.getRollbackEventFromBlockedEvent(id, timeoutMS);
 
-		if (rollbackEvent != null)
+		if (rollbackEvent != null) {
+			alertService.errorAlert(rollbackEvent.getType() + " rollback", "Enviando rollback de evento "
+					+ rollbackEvent.getType() + " con id " + rollbackEvent.getAggregateId());
 			publishToKafka(rollbackEvent, topic);
+		}
 	}
 
 	protected <T> T sendEventAndWaitResult(Aggregate agg, Event event, String topic) {
@@ -108,6 +124,9 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		try {
 			return getResult(event.getSessionId(), completableFuture);
 		} catch (ConfirmationTimeoutException e) {
+			e.printStackTrace();
+			alertService.errorAlert(event.getType() + " rollback", "Enviando rollback de evento " + event.getType()
+					+ " con id " + event.getAggregateId() + " " + e.getLocalizedMessage());
 			publishToKafka(agg.getRollbackEvent(event), topic);
 			throw e;
 		}
