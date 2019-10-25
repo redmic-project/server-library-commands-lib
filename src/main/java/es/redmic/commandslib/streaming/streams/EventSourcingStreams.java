@@ -269,7 +269,7 @@ public abstract class EventSourcingStreams extends BaseStreams {
 				.filter((id, event) -> (EventTypes.PREPARE_ROLLBACK.equals(event.getType())));
 
 		// Join por id, mandando a kafka el evento específico
-		prepareRollbackEvents.join(successEventsTable,
+		prepareRollbackEvents.leftJoin(successEventsTable,
 				(prepareRollbackEvent, lastSuccessEvent) -> getRollbackEvent(prepareRollbackEvent, lastSuccessEvent))
 				.to(topic);
 	}
