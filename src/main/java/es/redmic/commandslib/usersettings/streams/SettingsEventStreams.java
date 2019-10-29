@@ -666,7 +666,7 @@ public class SettingsEventStreams extends BaseStreams {
 	private Event getRollbackEvent(Event prepareRollbackEvent, Event lastSuccessEvent) {
 
 		return SettingsEventFactory.getEvent(prepareRollbackEvent, SettingsEventTypes.ROLLBACK,
-				((SettingsEvent) lastSuccessEvent).getSettings());
+				lastSuccessEvent != null ? ((SettingsEvent) lastSuccessEvent).getSettings() : null);
 
 	}
 
