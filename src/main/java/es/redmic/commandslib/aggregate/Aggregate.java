@@ -169,7 +169,7 @@ public abstract class Aggregate {
 
 		Event blockedEvent = getItemFromStateStore(id);
 
-		if (blockedEventRequiresRollback(blockedEvent, timeoutMS))
+		if (blockedEvent != null && blockedEventRequiresRollback(blockedEvent, timeoutMS))
 			return getRollbackEvent(blockedEvent);
 		return null;
 	}
