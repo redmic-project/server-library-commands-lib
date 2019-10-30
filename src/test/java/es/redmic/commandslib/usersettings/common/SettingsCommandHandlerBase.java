@@ -5,6 +5,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,19 +19,35 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.powermock.reflect.Whitebox;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaHandler;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import es.redmic.brokerlib.alert.AlertType;
+import es.redmic.brokerlib.alert.Message;
 import es.redmic.brokerlib.avro.common.Event;
+import es.redmic.brokerlib.avro.common.EventTypes;
 import es.redmic.brokerlib.avro.fail.PrepareRollbackEvent;
+import es.redmic.brokerlib.avro.fail.RollbackFailedEvent;
+import es.redmic.commandslib.exceptions.ConfirmationTimeoutException;
+import es.redmic.commandslib.exceptions.ItemLockedException;
+import es.redmic.commandslib.usersettings.aggregate.PersistenceAggregate;
+import es.redmic.commandslib.usersettings.commands.ClearCommand;
+import es.redmic.commandslib.usersettings.commands.CloneSettingsCommand;
+import es.redmic.commandslib.usersettings.commands.DeleteSettingsCommand;
+import es.redmic.commandslib.usersettings.commands.DeselectCommand;
+import es.redmic.commandslib.usersettings.commands.SaveSettingsCommand;
+import es.redmic.commandslib.usersettings.commands.SelectCommand;
+import es.redmic.commandslib.usersettings.commands.UpdateSettingsCommand;
 import es.redmic.commandslib.usersettings.handler.SettingsCommandHandler;
 import es.redmic.exception.common.ExceptionType;
 import es.redmic.exception.data.DeleteItemException;
+import es.redmic.restlib.config.UserService;
 
 /*-
  * #%L
@@ -70,6 +88,7 @@ import es.redmic.usersettingslib.events.delete.DeleteSettingsCancelledEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCheckFailedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsCheckedEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsConfirmedEvent;
+import es.redmic.usersettingslib.events.delete.DeleteSettingsEvent;
 import es.redmic.usersettingslib.events.delete.DeleteSettingsFailedEvent;
 import es.redmic.usersettingslib.events.delete.SettingsDeletedEvent;
 import es.redmic.usersettingslib.events.deselect.DeselectCancelledEvent;
@@ -100,8 +119,6 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 	private static final String code = UUID.randomUUID().toString();
 
-	private ObjectMapper mapper = new ObjectMapper();
-
 	@Value("${broker.topic.settings}")
 	private String settings_topic;
 
@@ -110,6 +127,11 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 	protected static BlockingQueue<Object> blockingQueue;
 
+	protected static BlockingQueue<Object> blockingQueueForAlerts;
+
+	@Mock
+	UserService userService;
+
 	@Autowired
 	SettingsCommandHandler settingsCommandHandler;
 
@@ -117,6 +139,11 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 	public void setup() {
 
 		blockingQueue = new LinkedBlockingDeque<>();
+		blockingQueueForAlerts = new LinkedBlockingDeque<>();
+
+		Whitebox.setInternalState(settingsCommandHandler, "userService", userService);
+
+		when(userService.getUserId()).thenReturn("13");
 	}
 
 	// Select
@@ -270,8 +297,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(confirm);
 		assertEquals(SettingsEventTypes.SELECTED, confirm.getType());
 
-		assertEquals(mapper.writeValueAsString(selectEvent.getSettings()),
-				mapper.writeValueAsString(((SelectedEvent) confirm).getSettings()));
+		JSONAssert.assertEquals(selectEvent.getSettings().toString(),
+				((SelectedEvent) confirm).getSettings().toString(), false);
 	}
 
 	// Envía un evento de error de selección y debe provocar un evento Cancelled sin
@@ -405,8 +432,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(confirm);
 		assertEquals(SettingsEventTypes.DESELECTED, confirm.getType());
 
-		assertEquals(mapper.writeValueAsString(deselectEvent.getSettings()),
-				mapper.writeValueAsString(((DeselectedEvent) confirm).getSettings()));
+		JSONAssert.assertEquals(deselectEvent.getSettings().toString(),
+				((DeselectedEvent) confirm).getSettings().toString(), false);
 	}
 
 	// Envía un evento de error de deselección y debe provocar un evento Cancelled
@@ -524,8 +551,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(confirm);
 		assertEquals(SettingsEventTypes.SELECTION_CLEARED, confirm.getType());
 
-		assertEquals(mapper.writeValueAsString(clearSelectionEvent.getSettings()),
-				mapper.writeValueAsString(((SelectionClearedEvent) confirm).getSettings()));
+		JSONAssert.assertEquals(clearSelectionEvent.getSettings().toString(),
+				((SelectionClearedEvent) confirm).getSettings().toString(), false);
 	}
 
 	// Envía un evento de error de limpiar selección y debe provocar un evento
@@ -628,8 +655,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotNull(confirm);
 		assertEquals(SettingsEventTypes.SAVED, confirm.getType());
 
-		assertEquals(mapper.writeValueAsString(saveSettingsEvent.getSettings()),
-				mapper.writeValueAsString(((SettingsSavedEvent) confirm).getSettings()));
+		JSONAssert.assertEquals(saveSettingsEvent.getSettings().toString(),
+				((SettingsSavedEvent) confirm).getSettings().toString(), false);
 	}
 
 	// Envía un evento de error de guardar selección y debe provocar un evento
@@ -762,8 +789,8 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 
 		assertNotNull(cancelled);
 		assertEquals(SettingsEventTypes.DELETE_CANCELLED, cancelled.getType());
-		assertEquals(mapper.writeValueAsString(settingsSavedEvent.getSettings()),
-				mapper.writeValueAsString(((DeleteSettingsCancelledEvent) cancelled).getSettings()));
+		JSONAssert.assertEquals(settingsSavedEvent.getSettings().toString(),
+				((DeleteSettingsCancelledEvent) cancelled).getSettings().toString(), false);
 	}
 
 	// Clone
@@ -858,29 +885,834 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 		assertNotEquals(sourceSettings.getAccessed(), settingsForUpdate.getAccessed());
 	}
 
-	// Envía un evento de prepare rollback y debe provocar un evento
-	// SettingsRollback con el item dentro
+	// Rollback
+
+	// Create
+
+	// ConfirmationTimeoutException
 	@Test
-	public void prepareRollbackEvent_SendSettingsRollbackEvent_IfReceivesSuccess() throws Exception {
+	public void saveSettings_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
 
-		// Envía created para meterlo en el stream y lo saca de la cola
-		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "37");
-		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
-		blockingQueue.poll(10, TimeUnit.SECONDS);
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "30a");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
 
-		PrepareRollbackEvent event = SettingsDataUtil.getPrepareRollbackEvent(code + "37");
+		Thread.sleep(1000);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(code + "30");
+		persistenceDTO.setSettingsId(selectedEvent.getAggregateId());
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "save", new SaveSettingsCommand(persistenceDTO));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.PARTIAL_SAVE, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void saveSettings_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SAVE_FAILED)
+				.buildFrom(SettingsDataUtil.getSettingsSavedEvent(code + "31"));
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "save",
+					new SaveSettingsCommand(SettingsDataUtil.getPersistenceDTO(code + "31")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToSaveSettings_IfSaveItemIsLocked()
+			throws Exception {
+
+		SaveSettingsEvent saveSettingsEvent = SettingsDataUtil.getSaveSettingsEvent(code + "32");
+		kafkaTemplate.send(settings_topic, saveSettingsEvent.getAggregateId(), saveSettingsEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(saveSettingsEvent);
 
 		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
 
-		Event rollback = (Event) blockingQueue.poll(30, TimeUnit.SECONDS);
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
 
 		assertNotNull(rollback);
 		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(saveSettingsEvent.getType(), event.getFailEventType());
 		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
-		assertEquals(settingsSavedEvent.getSettings().getId(),
-				((SettingsRollbackEvent) rollback).getLastSnapshotItem().getId());
-		assertEquals(settingsSavedEvent.getSettings().getUpdated().getMillis(),
-				((SettingsRollbackEvent) rollback).getLastSnapshotItem().getUpdated().getMillis());
+		assertNull(((SettingsRollbackEvent) rollback).getLastSnapshotItem());
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToSaveSettings_IfSaveItemIsLocked()
+			throws Exception {
+
+		SaveSettingsEvent saveSettingsEvent = SettingsDataUtil.getSaveSettingsEvent(code + "33");
+		kafkaTemplate.send(settings_topic, saveSettingsEvent.getAggregateId(), saveSettingsEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SAVE_FAILED)
+				.buildFrom(saveSettingsEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		assertNull(((SettingsRollbackEvent) rollback).getLastSnapshotItem());
+	}
+
+	// Update
+	// ConfirmationTimeoutException
+	@Test
+	public void updateSettings_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "34a");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "34");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(code + "34");
+		persistenceDTO.setSettingsId(selectedEvent.getAggregateId());
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "update", new UpdateSettingsCommand(persistenceDTO));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.PARTIAL_SAVE, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void updateSettings_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "35");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SAVE_FAILED)
+				.buildFrom(settingsSavedEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "update",
+					new UpdateSettingsCommand(SettingsDataUtil.getPersistenceDTO(code + "35")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(50, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToSaveSettings_IfItemIsLocked()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "36");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		SaveSettingsEvent saveSettingsEvent = SettingsDataUtil.getSaveSettingsEvent(code + "36");
+		kafkaTemplate.send(settings_topic, saveSettingsEvent.getAggregateId(), saveSettingsEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(saveSettingsEvent);
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(saveSettingsEvent.getType(), event.getFailEventType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(settingsSavedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToSaveSettings_IfItemIsLocked()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "37");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		SaveSettingsEvent saveSettingsEvent = SettingsDataUtil.getSaveSettingsEvent(code + "37");
+		kafkaTemplate.send(settings_topic, saveSettingsEvent.getAggregateId(), saveSettingsEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SAVE_FAILED)
+				.buildFrom(saveSettingsEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(settingsSavedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	// Clone
+	// ConfirmationTimeoutException
+	@Test
+	public void cloneSettings_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "38a");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(code + "38");
+		persistenceDTO.setSettingsId(settingsSavedEvent.getAggregateId());
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "clone",
+					new CloneSettingsCommand(persistenceDTO.getSettingsId(), persistenceDTO.getService()));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.CLONE, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void cloneSettings_ThrowItemLockedException_IfItemLocked() throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "39a");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SAVE_FAILED)
+				.buildFrom(settingsSavedEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PersistenceDTO persistenceDTO = SettingsDataUtil.getPersistenceDTO(code + "39");
+		persistenceDTO.setSettingsId(settingsSavedEvent.getAggregateId());
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "clone",
+					new CloneSettingsCommand(persistenceDTO.getSettingsId(), persistenceDTO.getService()));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+	}
+
+	// Delete
+	// ConfirmationTimeoutException
+	@Test
+	public void deleteSettings_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "40");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "delete",
+					new DeleteSettingsCommand(settingsSavedEvent.getSettings().getId()));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event confirm = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(confirm);
+		assertEquals(SettingsEventTypes.DELETE_CHECKED, confirm.getType());
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(SettingsEventTypes.CHECK_DELETE, ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void deleteSettings_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "41");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.DELETE_FAILED)
+				.buildFrom(settingsSavedEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "delete",
+					new DeleteSettingsCommand(settingsSavedEvent.getSettings().getId()));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(50, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToDeleteSettings_IfItemIsLocked()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "42");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		DeleteSettingsEvent deleteSettingsEvent = SettingsDataUtil.getDeleteSettingsEvent(code + "42");
+		kafkaTemplate.send(settings_topic, deleteSettingsEvent.getAggregateId(), deleteSettingsEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(deleteSettingsEvent);
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(deleteSettingsEvent.getType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(settingsSavedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToDeleteSettings_IfItemIsLocked()
+			throws Exception {
+
+		SettingsSavedEvent settingsSavedEvent = SettingsDataUtil.getSettingsSavedEvent(code + "43");
+		kafkaTemplate.send(settings_topic, settingsSavedEvent.getAggregateId(), settingsSavedEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		DeleteSettingsEvent deleteSettingsEvent = SettingsDataUtil.getDeleteSettingsEvent(code + "43");
+		kafkaTemplate.send(settings_topic, deleteSettingsEvent.getAggregateId(), deleteSettingsEvent);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.DELETE_FAILED)
+				.buildFrom(deleteSettingsEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(settingsSavedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	// Select
+
+	// ConfirmationTimeoutException
+	@Test
+	public void select_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "45");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "select",
+					new SelectCommand(SettingsDataUtil.getSelectionDTO(code + "45")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.PARTIAL_SELECT, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void select_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SELECT_FAILED)
+				.buildFrom(SettingsDataUtil.getSettingsSavedEvent(code + "46"));
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "select",
+					new SelectCommand(SettingsDataUtil.getSelectionDTO(code + "46")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToSelect_IfSelectItemIsLocked()
+			throws Exception {
+
+		SelectEvent selectEvent = SettingsDataUtil.getSelectEvent(code + "47");
+		kafkaTemplate.send(settings_topic, selectEvent.getAggregateId(), selectEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(selectEvent);
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(selectEvent.getType(), event.getFailEventType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		assertNull(((SettingsRollbackEvent) rollback).getLastSnapshotItem());
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToSelect_IfSelectItemIsLocked()
+			throws Exception {
+
+		SelectEvent selectEvent = SettingsDataUtil.getSelectEvent(code + "48");
+		kafkaTemplate.send(settings_topic, selectEvent.getAggregateId(), selectEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.SELECT_FAILED)
+				.buildFrom(selectEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		assertNull(((SettingsRollbackEvent) rollback).getLastSnapshotItem());
+	}
+
+	// Deselect
+
+	// ConfirmationTimeoutException
+	@Test
+	public void deselect_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "49");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "deselect",
+					new DeselectCommand(SettingsDataUtil.getSelectionDTO(code + "49")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.PARTIAL_DESELECT, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void deselect_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.DESELECT_FAILED)
+				.buildFrom(SettingsDataUtil.getSettingsSavedEvent(code + "50"));
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "deselect",
+					new DeselectCommand(SettingsDataUtil.getSelectionDTO(code + "50")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToDeselect_IfDeselectItemIsLocked()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "51");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		DeselectEvent deselectEvent = SettingsDataUtil.getDeselectEvent(code + "51");
+		kafkaTemplate.send(settings_topic, deselectEvent.getAggregateId(), deselectEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(deselectEvent);
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(deselectEvent.getType(), event.getFailEventType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(selectedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToDeselect_IfDeselectItemIsLocked()
+			throws Exception {
+
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "52");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		DeselectEvent deselectEvent = SettingsDataUtil.getDeselectEvent(code + "52");
+		kafkaTemplate.send(settings_topic, deselectEvent.getAggregateId(), deselectEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.DESELECT_FAILED)
+				.buildFrom(deselectEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(selectedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	// Clear
+
+	// ConfirmationTimeoutException
+	@Test
+	public void clear_ThrowConfirmationTimeoutExceptionAndSendRollbackEvent_IfConfirmationIsNotReceived()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "53");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		Thread.sleep(1000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "clear",
+					new ClearCommand(SettingsDataUtil.getSelectionDTO(code + "53")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ConfirmationTimeoutException);
+		}
+
+		Event evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		while (evt == null || !evt.getType().equals(EventTypes.ROLLBACK))
+			evt = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertEquals(EventTypes.ROLLBACK, evt.getType());
+		assertEquals(SettingsEventTypes.PARTIAL_CLEAR_SELECTION, ((SettingsRollbackEvent) evt).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	// ItemLockedException
+	@Test
+	public void clear_ThrowItemLockedExceptionAndSendRollbackEvent_IfItemLocked() throws Exception {
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.CLEAR_SELECTION_FAILED)
+				.buildFrom(SettingsDataUtil.getSettingsSavedEvent(code + "54"));
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		try {
+			Whitebox.invokeMethod(settingsCommandHandler, "clear",
+					new ClearCommand(SettingsDataUtil.getSelectionDTO(code + "54")));
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(EventTypes.ROLLBACK, rollback.getType());
+		assertEquals(rollbackFailedEvent.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+
+		// LLegó un mensaje de alerta
+		Message message = (Message) blockingQueueForAlerts.poll(40, TimeUnit.SECONDS);
+		assertNotNull(message);
+		assertEquals(AlertType.ERROR.name(), message.getType());
+	}
+
+	@Test
+	public void prepareRollbackEvent_SendSettingsRollbackEventWithFailEventTypeEqualToClearSelection_IfItemIsLocked()
+			throws Exception {
+
+		// Envía selected para meterlo en el stream
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "55");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		ClearSelectionEvent clearSelectionEvent = SettingsDataUtil.getClearEvent(code + "55");
+		kafkaTemplate.send(settings_topic, clearSelectionEvent.getAggregateId(), clearSelectionEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(clearSelectionEvent);
+
+		kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		Event rollback = (Event) blockingQueue.poll(40, TimeUnit.SECONDS);
+
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(clearSelectionEvent.getType(), event.getFailEventType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(selectedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
+	}
+
+	@Test
+	public void prepareRollbackEventAfterRollbackFail_SendSettingsRollbackEventWithFailEventTypeEqualToClearSelection_IfItemIsLocked()
+			throws Exception {
+
+		SelectedEvent selectedEvent = SettingsDataUtil.getSelectedEvent(code + "56");
+		selectedEvent.getSettings().setName(null);
+		kafkaTemplate.send(settings_topic, selectedEvent.getAggregateId(), selectedEvent);
+		blockingQueue.poll(60, TimeUnit.SECONDS);
+
+		ClearSelectionEvent clearSelectionEvent = SettingsDataUtil.getClearEvent(code + "56");
+		kafkaTemplate.send(settings_topic, clearSelectionEvent.getAggregateId(), clearSelectionEvent);
+		blockingQueue.poll(30, TimeUnit.SECONDS);
+
+		RollbackFailedEvent rollbackFailedEvent = new RollbackFailedEvent(SettingsEventTypes.CLEAR_SELECTION_FAILED)
+				.buildFrom(clearSelectionEvent);
+		kafkaTemplate.send(settings_topic, rollbackFailedEvent.getAggregateId(), rollbackFailedEvent);
+
+		Thread.sleep(8000);
+
+		PrepareRollbackEvent event = (PrepareRollbackEvent) new PersistenceAggregate(null, userService)
+				.getRollbackEvent(rollbackFailedEvent);
+
+		try {
+			kafkaTemplate.send(settings_topic, event.getAggregateId(), event);
+
+		} catch (Exception e) {
+			assertTrue(e instanceof ItemLockedException);
+		}
+		Event rollback = (Event) blockingQueue.poll(60, TimeUnit.SECONDS);
+		assertNotNull(rollback);
+		assertEquals(SettingsEventTypes.ROLLBACK, rollback.getType());
+		assertEquals(event.getFailEventType(), ((SettingsRollbackEvent) rollback).getFailEventType());
+		JSONAssert.assertEquals(selectedEvent.getSettings().toString(),
+				((SettingsRollbackEvent) rollback).getLastSnapshotItem().toString(), false);
 	}
 
 	// Select
@@ -1019,6 +1851,11 @@ public class SettingsCommandHandlerBase extends KafkaBaseIntegrationTest {
 	public void settingsRollbackEvent(SettingsRollbackEvent settingsRollbackEvent) {
 
 		blockingQueue.offer(settingsRollbackEvent);
+	}
+
+	@KafkaListener(topics = "${broker.topic.alert}", groupId = "test")
+	public void errorAlert(Message message) {
+		blockingQueueForAlerts.offer(message);
 	}
 
 	@KafkaHandler(isDefault = true)
