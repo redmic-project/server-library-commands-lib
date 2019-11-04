@@ -30,12 +30,16 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.kafka.annotation.KafkaHandler;
 
+import es.redmic.brokerlib.alert.AlertService;
 import es.redmic.brokerlib.avro.common.Event;
+import es.redmic.brokerlib.avro.fail.RollbackFailedEvent;
+import es.redmic.commandslib.aggregate.Aggregate;
 import es.redmic.commandslib.exceptions.ConfirmationTimeoutException;
 import es.redmic.commandslib.gateway.BrokerEvent;
 import es.redmic.exception.common.BaseException;
@@ -43,13 +47,23 @@ import es.redmic.exception.common.BaseException;
 public abstract class CommandHandler implements ApplicationEventPublisherAware {
 
 	@Value("${rest.eventsource.timeout.ms}")
-	private long timeoutMS;
+	protected long timeoutMS;
 
 	protected static Logger logger = LogManager.getLogger();
 
 	protected ApplicationEventPublisher eventPublisher;
 
-	protected Map<String, CompletableFuture<BaseException>> completableFeatures = new HashMap<>();
+	protected Map<String, CompletableFuture<Object>> completableFeatures = new HashMap<>();
+
+	@Autowired
+	AlertService alertService;
+
+	@KafkaHandler
+	private void listen(RollbackFailedEvent event) {
+
+		alertService.errorAlert("Rollback fallido " + event.getAggregateId(), "Rollback de evento "
+				+ event.getFailEventType() + " con id " + event.getAggregateId() + " ha fallado.");
+	}
 
 	@Override
 	public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
@@ -71,15 +85,15 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		resolveCommand(sessionId, null);
 	}
 
-	protected void resolveCommand(String sessionId, BaseException ex) {
+	protected void resolveCommand(String sessionId, Object result) {
 
 		// Si el evento es una excepción se resuelve con ella, si no, con null que
 		// significa que todo fue bien
 		Executors.newCachedThreadPool().submit(() -> {
-			CompletableFuture<BaseException> future = completableFeatures.get(sessionId);
+			CompletableFuture<Object> future = completableFeatures.get(sessionId);
 
 			if (future != null) {
-				future.complete(ex);// future.complete(ex);
+				future.complete(result);
 			} else {
 				logger.warn("Petición asíncrona no resgistrada para sessionId: " + sessionId);
 			}
@@ -87,24 +101,57 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		});
 	}
 
-	// Crea un completableFuture para esperar por el evento de confirmación o error.
-	protected <T> CompletableFuture<T> getCompletableFeature(String sessionId, T item) {
+	protected void unlockStatus(Aggregate agg, String id, String topic) {
 
-		// Añade espera para resolver la petición
-		CompletableFuture<BaseException> future = new CompletableFuture<BaseException>();
-		completableFeatures.put(sessionId, future);
-		// Cuando se resuelve la espera, se resuelve con el dto
-		return future.thenApplyAsync(ex -> apply(ex, item));
+		Event rollbackEvent = agg.getRollbackEventFromBlockedEvent(id, timeoutMS);
+
+		if (rollbackEvent != null) {
+			alertService.errorAlert(rollbackEvent.getType() + " rollback", "Enviando rollback de evento "
+					+ rollbackEvent.getType() + " con id " + rollbackEvent.getAggregateId());
+			publishToKafka(rollbackEvent, topic);
+		}
 	}
 
-	private <T> T apply(BaseException ex, T item) {
+	protected <T> T sendEventAndWaitResult(Aggregate agg, Event event, String topic) {
 
-		if (ex == null) {
+		// Crea la espera hasta que se responda con evento completado
+		CompletableFuture<T> completableFuture = getCompletableFeature(event.getSessionId());
+
+		// Emite evento para enviar a kafka
+		publishToKafka(event, topic);
+
+		// Obtiene el resultado cuando se resuelva la espera
+		try {
+			return getResult(event.getSessionId(), completableFuture);
+		} catch (ConfirmationTimeoutException e) {
+			e.printStackTrace();
+			alertService.errorAlert(event.getType() + " rollback", "Enviando rollback de evento " + event.getType()
+					+ " con id " + event.getAggregateId() + " " + e.getLocalizedMessage());
+			publishToKafka(agg.getRollbackEvent(event), topic);
+			throw e;
+		}
+	}
+
+	// Crea un completableFuture para esperar por el evento de confirmación o error.
+	protected <T> CompletableFuture<T> getCompletableFeature(String sessionId) {
+
+		// Añade espera para resolver la petición
+		CompletableFuture<Object> future = new CompletableFuture<Object>();
+		completableFeatures.put(sessionId, future);
+
+		// Cuando se resuelve la espera, se resuelve con el dto
+		return future.thenApplyAsync(obj -> apply(obj));
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T> T apply(Object result) {
+
+		if (!(result instanceof BaseException)) {
 			logger.debug("Resolver con éxito");
-			return item;
+			return (T) result;
 		} else {
 			logger.debug("Error. Lanzar excepción.");
-			throw ex;
+			throw (BaseException) result;
 		}
 	}
 
@@ -119,14 +166,19 @@ public abstract class CommandHandler implements ApplicationEventPublisherAware {
 		try {
 			return completableFuture.get(timeoutMS, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException | TimeoutException e) {
-			// TODO: Enviar alerta ya que ha quedado un evento sin acabar el ciclo
+			e.printStackTrace();
 			logger.error("Error. No se ha recibido confirmación de la acción realizada.");
+
 			throw new ConfirmationTimeoutException();
 		} catch (ExecutionException e) {
+			e.printStackTrace();
+
 			if (e.getCause() instanceof BaseException)
 				throw ((BaseException) e.getCause()); // Error enviado desde la vista
-			else
-				throw new ConfirmationTimeoutException();
+
+			logger.error("Error. Excepción no controlada en la ejecución.");
+
+			throw new ConfirmationTimeoutException();
 		} finally {
 			completableFeatures.remove(sessionId);
 		}

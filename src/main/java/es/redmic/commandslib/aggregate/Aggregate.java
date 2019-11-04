@@ -27,9 +27,12 @@ import org.apache.logging.log4j.Logger;
 
 import es.redmic.brokerlib.avro.common.Event;
 import es.redmic.brokerlib.avro.common.EventTypes;
+import es.redmic.brokerlib.avro.fail.PrepareRollbackEvent;
+import es.redmic.brokerlib.avro.fail.RollbackFailedEvent;
 import es.redmic.commandslib.exceptions.HistoryNotFoundException;
 import es.redmic.commandslib.exceptions.ItemLockedException;
 import es.redmic.exception.data.ItemNotFoundException;
+import es.redmic.exception.settings.SettingsChangeForbiddenException;
 
 public abstract class Aggregate {
 
@@ -90,11 +93,9 @@ public abstract class Aggregate {
 
 		if (isLocked(event.getType()) && !event.getType().equals(EventTypes.DELETED)) {
 
-			// TODO: Si el tiempo entre el último y el actual es superior a el máximo del
-			// ciclo, compensar.
-
 			logger.error("Intentando modificar un elemento bloqueado por una edición en curso, ",
 					event.getAggregateId());
+			logger.error("Item bloqueado por un evento de tipo: " + event.getType());
 			throw new ItemLockedException("id", event.getAggregateId());
 		}
 	}
@@ -156,5 +157,43 @@ public abstract class Aggregate {
 
 	public boolean isDeleted() {
 		return deleted;
+	}
+
+	protected void authorshipCheck(String userId, String historicalEventUserId) {
+
+		if (historicalEventUserId != null && !userId.equals(historicalEventUserId))
+			throw new SettingsChangeForbiddenException();
+	}
+
+	public Event getRollbackEventFromBlockedEvent(String id, long timeoutMS) {
+
+		Event blockedEvent = getItemFromStateStore(id);
+
+		if (blockedEvent != null && blockedEventRequiresRollback(blockedEvent, timeoutMS))
+			return getRollbackEvent(blockedEvent);
+		return null;
+	}
+
+	private boolean blockedEventRequiresRollback(Event event, long timeoutMS) {
+
+		return event.getDate().plus(timeoutMS).isAfterNow();
+	}
+
+	public Event getRollbackEvent(Event sourceEvent) {
+
+		logger.error(
+				"Un error en el sistema ha dejado un evento en estado bloqueado. Generando evento rollback para evento bloqueado de tipo "
+						+ sourceEvent.getType() + ". ItemId : " + sourceEvent.getAggregateId());
+
+		String failEventType = null;
+
+		if (sourceEvent instanceof RollbackFailedEvent)
+			failEventType = ((RollbackFailedEvent) sourceEvent).getFailEventType();
+		else
+			failEventType = sourceEvent.getType();
+
+		PrepareRollbackEvent event = new PrepareRollbackEvent().buildFrom(sourceEvent);
+		event.setFailEventType(failEventType);
+		return event;
 	}
 }
