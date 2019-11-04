@@ -13,7 +13,7 @@
 	<groupId>es.redmic.lib</groupId>
 	<artifactId>commands-lib</artifactId>
 	<packaging>jar</packaging>
-	<version>0.9.0-feature-atlasMicroservice</version>
+	<version>0.10.0</version>
 	<name>commands-lib</name>
 
 	<properties>
