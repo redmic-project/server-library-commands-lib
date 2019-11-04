@@ -18,12 +18,11 @@
 
 	<properties>
 		<!-- REDMIC -->
-		<redmic.models.version>0.10.0-feature-cleanAtlasComponents</redmic.models.version>
-		<redmic.broker-lib.version>0.10.0-feature-atlasMicroservice</redmic.broker-lib.version>
-		<redmic.rest-lib.version>0.10.0-feature-atlasMicroservice</redmic.rest-lib.version>
-		<redmic.user-settings-lib.version>0.1.0</redmic.user-settings-lib.version>
-		<redmic.user-settings-lib.version>0.1.0</redmic.user-settings-lib.version>
-		<redmic.test-utils.version>0.9.0-feature-atlasMicroservice</redmic.test-utils.version>
+		<redmic.models.version>0.11.0</redmic.models.version>
+		<redmic.broker-lib.version>0.11.0</redmic.broker-lib.version>
+		<redmic.rest-lib.version>0.11.0</redmic.rest-lib.version>
+		<redmic.user-settings-lib.version>0.2.0</redmic.user-settings-lib.version>
+		<redmic.test-utils.version>0.10.0</redmic.test-utils.version>
 		<!-- OTHERS -->
 		<kafka.version>2.0.1</kafka.version>
 		<confluent.version>5.0.1</confluent.version>
