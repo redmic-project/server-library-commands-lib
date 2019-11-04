@@ -13,7 +13,7 @@
 			"type": ["integer", "null"]
 		},
 		"type": {
-			"type": ["integer", "null"],
+			"type": ["string", "null"],
 			"url": "/api/vessels/commands/testtype"
 		},
 		"name": {

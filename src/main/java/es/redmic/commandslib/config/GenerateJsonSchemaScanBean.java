@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
@@ -48,6 +49,7 @@ import com.kjetland.jackson.jsonSchema.JsonSchemaResources;
 import es.redmic.commandslib.controller.CommandBaseController;
 import es.redmic.exception.mediastorage.MSFileUploadException;
 
+@Configuration
 public class GenerateJsonSchemaScanBean implements ApplicationContextAware {
 
 	@Autowired
@@ -151,7 +153,7 @@ public class GenerateJsonSchemaScanBean implements ApplicationContextAware {
 
 		if (properties.isEmpty()) {
 			String serverPath = env.getProperty("server.servlet.context-path")
-					+ env.getProperty("spring.mvc.servlet.path");
+					+ env.getProperty("microservice.view.path");
 			for (Iterator it = ((AbstractEnvironment) env).getPropertySources().iterator(); it.hasNext();) {
 				PropertySource propertySource = (PropertySource) it.next();
 				if (propertySource instanceof MapPropertySource) {
