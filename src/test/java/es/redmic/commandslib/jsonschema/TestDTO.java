@@ -9,9 +9,9 @@ package es.redmic.commandslib.jsonschema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ package es.redmic.commandslib.jsonschema;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.kjetland.jackson.jsonSchema.annotations.JsonSchemaUrl;
+import com.kjetland.jackson.jsonSchema.annotations.JsonSchemaUrlUuid;
 
 import es.redmic.brokerlib.deserializer.CustomRelationDeserializer;
 
@@ -39,7 +39,7 @@ public class TestDTO {
 
 	@JsonSerialize(as = TestTypeDTO.class)
 	@JsonDeserialize(using = CustomRelationDeserializer.class)
-	@JsonSchemaUrl(value = "controller.mapping.testtype")
+	@JsonSchemaUrlUuid(value = "controller.mapping.testtype")
 	private TestTypeDTO type;
 
 	private String name;
